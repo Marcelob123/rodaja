@@ -1,0 +1,1944 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MotoApp - Mobilidade Inteligente</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* === VARIÁVEIS E RESET === */
+        :root {
+            --primary: #00C853; 
+            --primary-dark: #009624;
+            --bg-color: #f4f7f6;
+            --text-dark: #2c3e50;
+            --text-light: #7f8c8d;
+            --white: #ffffff;
+            --danger: #e74c3c;
+            --warning: #f1c40f;
+            --info: #3498db;
+            --card-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            --border-radius: 16px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #e0e5ec;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 414px; 
+            height: 100vh;
+            max-height: 896px;
+            background-color: var(--bg-color);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 40px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (max-width: 480px) {
+            .app-container {
+                height: 100vh;
+                max-height: none;
+                box-shadow: none;
+            }
+        }
+
+        /* === COMPONENTES GERAIS === */
+        .screen {
+            display: none;
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+            overflow-y: auto;
+            background-color: var(--bg-color);
+            animation: fadeIn 0.3s ease-in-out;
+            padding-bottom: 70px; /* Espaço para o Bottom Nav */
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            background: var(--white);
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            position: relative;
+            z-index: 10;
+        }
+
+        .header h2 {
+            font-size: 1.2rem;
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        .content {
+            padding: 24px;
+            flex: 1;
+            position: relative;
+        }
+
+        /* Botões */
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--white);
+            box-shadow: 0 4px 15px rgba(0, 200, 83, 0.3);
+        }
+
+        .btn-primary:disabled {
+            background: #95a5a6;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: scale(0.98);
+            background: var(--primary-dark);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: var(--white);
+        }
+
+        .btn-info {
+            background: var(--info);
+            color: var(--white);
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            width: auto;
+        }
+
+        /* Inputs */
+        .input-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .input-group i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 16px 16px 16px 48px;
+            border: 1px solid #e1e8ed;
+            border-radius: 12px;
+            font-size: 1rem;
+            outline: none;
+            transition: 0.3s;
+            background: var(--white);
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 200, 83, 0.1);
+        }
+
+        /* === MODAL === */
+        .modal-overlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: var(--white);
+            width: 100%;
+            border-radius: var(--border-radius);
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        /* === CHAT === */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #f9f9f9;
+        }
+
+        .chat-bubble {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 16px;
+            font-size: 0.9rem;
+            word-wrap: break-word;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-sent {
+            align-self: flex-end;
+            background: var(--primary);
+            color: var(--white);
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-received {
+            align-self: flex-start;
+            background: #e1e8ed;
+            color: var(--text-dark);
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-role-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+            opacity: 0.9;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* === BOTTOM NAVIGATION === */
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 70px;
+            background: var(--white);
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 50;
+            display: none; 
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-light);
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .nav-item i {
+            font-size: 1.4rem;
+            margin-bottom: 4px;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        /* === TELA INICIAL E CADASTRO === */
+        #screen-home {
+            background: linear-gradient(135deg, #121212 0%, #2c3e50 100%);
+            color: var(--white);
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 40px 24px;
+            padding-bottom: 40px; 
+        }
+
+        .logo-area {
+            margin-bottom: 60px;
+        }
+
+        .logo-area i {
+            font-size: 5rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+
+        .logo-area h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -1px;
+        }
+
+        .home-buttons {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-top: auto;
+        }
+
+        /* Abas de Login/Cadastro */
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 24px;
+            border-bottom: 2px solid #e1e8ed;
+        }
+
+        .auth-tab {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            font-weight: 600;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .auth-tab.active {
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+        }
+
+        .role-selector {
+            display: flex;
+            background: #e1e8ed;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            padding: 4px;
+        }
+
+        .role-btn {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            border-radius: 8px;
+            font-weight: 600;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .role-btn.active {
+            background: var(--white);
+            color: var(--primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        #driver-extra-fields {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        #edit-driver-extra-fields {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* === MAPAS E CARDS (GPS ANIMADO) === */
+        .map-placeholder {
+            width: 100%;
+            height: 200px;
+            background: #e1e8ed url('https://www.transparenttextures.com/patterns/cubes.png');
+            border-radius: var(--border-radius);
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-light);
+            font-weight: 500;
+            border: 2px dashed #bdc3c7;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-active {
+            height: 300px;
+            background: #d5e8d4 url('https://www.transparenttextures.com/patterns/cubes.png');
+            border: 2px solid var(--primary);
+        }
+
+        .map-route-line {
+            position: absolute;
+            width: 80%;
+            height: 4px;
+            background: var(--primary);
+            top: 50%;
+            left: 10%;
+            transform: translateY(-50%);
+            box-shadow: 0 0 10px var(--primary);
+            border-radius: 4px;
+        }
+
+        .gps-vehicle {
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            transform: translate(-50%, -50%);
+            color: var(--text-dark);
+            font-size: 2rem;
+            transition: left 1s ease-in-out;
+            z-index: 5;
+            background: white;
+            border-radius: 50%;
+            padding: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .gps-destination {
+            position: absolute;
+            top: 50%;
+            right: 10%;
+            transform: translate(50%, -50%);
+            color: var(--danger);
+            font-size: 2rem;
+            z-index: 4;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            color: var(--text-dark);
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        /* Perfis e Status */
+        .profile-card {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+        }
+        .status-online { background-color: var(--primary); box-shadow: 0 0 8px var(--primary); }
+        .status-offline { background-color: var(--text-light); }
+
+        .avatar {
+            width: 60px;
+            height: 60px;
+            background: var(--bg-color);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            color: var(--primary);
+            overflow: hidden;
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .profile-info {
+            flex: 1;
+        }
+
+        .profile-info h4 {
+            color: var(--text-dark);
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+
+        .profile-info p {
+            color: var(--text-light);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 2px;
+        }
+
+        /* Detalhes da Rota */
+        .ride-route {
+            margin-bottom: 20px;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .ride-route::before {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: 10px;
+            bottom: 10px;
+            width: 2px;
+            background: #e1e8ed;
+        }
+
+        .route-point {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .route-point i {
+            position: absolute;
+            left: -24px;
+            top: 2px;
+            font-size: 12px;
+        }
+
+        .route-point.start i { color: var(--primary); }
+        .route-point.end i { color: var(--danger); }
+        
+        .route-point strong {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-bottom: 2px;
+        }
+
+        .route-point span {
+            font-size: 1rem;
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+
+        .ride-details {
+            display: flex;
+            justify-content: space-between;
+            background: var(--bg-color);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .detail-item {
+            text-align: center;
+        }
+
+        .detail-item span {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        .detail-item strong {
+            font-size: 1.1rem;
+            color: var(--primary);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .view-switcher {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 50;
+        }
+
+        .status-badge {
+            background: var(--bg-color);
+            color: var(--primary);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 8px;
+            border: 1px solid var(--primary);
+        }
+
+        .sync-text {
+            text-align: center;
+            font-size: 0.75rem; 
+            color: var(--text-light); 
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        /* Estilos do Histórico */
+        .history-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border-left: 4px solid var(--primary);
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+
+        .history-price {
+            font-weight: 700;
+            color: var(--text-dark);
+            font-size: 1.1rem;
+        }
+
+        .history-month-badge {
+            background: var(--text-dark); 
+            color: white; 
+            padding: 8px 16px; 
+            border-radius: 8px; 
+            font-weight: 600; 
+            margin: 16px 0 12px 0; 
+            display: flex; 
+            justify-content: space-between;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+    </style>
+</head>
+<body onload="initApp()">
+
+    <div class="app-container">
+
+        <!-- BOTTOM NAVIGATION -->
+        <div id="main-bottom-nav" class="bottom-nav">
+            <div class="nav-item active" id="nav-home" onclick="openDashboard()">
+                <i class="fa-solid fa-map-location-dot"></i>
+                <span id="nav-home-text">Corridas</span>
+            </div>
+            <div class="nav-item" id="nav-history" onclick="openHistory()">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>Histórico</span>
+            </div>
+            <div class="nav-item" id="nav-profile" onclick="openProfile()">
+                <i class="fa-solid fa-user"></i>
+                <span>Perfil</span>
+            </div>
+        </div>
+
+        <!-- OVERLAYS E MODAIS -->
+        <div id="modal-price" class="modal-overlay">
+            <div class="modal-content">
+                <h3 class="section-title"><i class="fa-solid fa-tags" style="color: var(--primary);"></i> Configurar Minha Tarifa</h3>
+                <p style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 16px;">
+                    Defina o valor cobrado por Km rodado. O preço base da plataforma é R$ 5,00.
+                </p>
+                <div class="input-group">
+                    <i class="fa-solid fa-money-bill-wave"></i>
+                    <input type="number" class="form-control" id="input-price-km" step="0.10" placeholder="Ex: 1.50">
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-outline" onclick="closePriceModal()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="savePriceModal()">Salvar Preço</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL DE AVALIAÇÃO (RATING) -->
+        <div id="modal-rating" class="modal-overlay">
+            <div class="modal-content" style="text-align: center;">
+                <h3 class="section-title"><i class="fa-solid fa-star-half-stroke" style="color: var(--warning);"></i> Avalie o Motorista</h3>
+                <p style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 16px;">Como foi sua corrida com <strong id="rating-driver-name"></strong>?</p>
+                <div id="star-rating" style="font-size: 2.5rem; color: #e1e8ed; margin-bottom: 24px; cursor: pointer; display: flex; justify-content: center; gap: 8px;">
+                    <i class="fa-solid fa-star" data-val="1" onclick="setRatingVal(1)"></i>
+                    <i class="fa-solid fa-star" data-val="2" onclick="setRatingVal(2)"></i>
+                    <i class="fa-solid fa-star" data-val="3" onclick="setRatingVal(3)"></i>
+                    <i class="fa-solid fa-star" data-val="4" onclick="setRatingVal(4)"></i>
+                    <i class="fa-solid fa-star" data-val="5" onclick="setRatingVal(5)"></i>
+                </div>
+                <button class="btn btn-primary" onclick="submitRating()">Enviar Avaliação</button>
+                <button class="btn btn-outline" style="margin-top: 10px; border: none; color: var(--text-light);" onclick="skipRating()">Pular avaliação</button>
+            </div>
+        </div>
+
+        <!-- MODAL CHAT -->
+        <div id="modal-chat" class="modal-overlay">
+            <div class="modal-content" style="height: 85vh; display: flex; flex-direction: column; padding: 0;">
+                <div class="header" style="display:flex; justify-content: space-between; align-items: center; border-radius: 16px 16px 0 0;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fa-solid fa-comments" style="color: var(--primary); font-size: 1.2rem;"></i>
+                        <h3 id="chat-title" style="margin: 0; font-size: 1rem;">Chat da Corrida</h3>
+                    </div>
+                    <i class="fa-solid fa-xmark" style="font-size: 1.5rem; color: var(--text-light); cursor: pointer;" onclick="closeChat()"></i>
+                </div>
+                <div id="chat-messages" class="chat-messages">
+                    <!-- Mensagens via JS -->
+                </div>
+                <div style="padding: 16px; border-top: 1px solid #eee; display: flex; gap: 8px; background: var(--white); border-radius: 0 0 16px 16px;">
+                    <input type="text" id="chat-input" class="form-control" placeholder="Escreva sua mensagem..." style="padding: 12px; margin-bottom: 0;">
+                    <button class="btn btn-primary btn-small" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 1. TELA INICIAL -->
+        <div id="screen-home" class="screen active">
+            <div class="logo-area">
+                <i class="fa-solid fa-motorcycle"></i>
+                <h1>MotoApp</h1>
+                <p>Chegue rápido. Chegue seguro.</p>
+            </div>
+            <div class="home-buttons">
+                <button class="btn btn-primary" onclick="navToAuth('register')">Criar Conta</button>
+                <button class="btn btn-outline" style="color: white; border-color: white;" onclick="navToAuth('login')">Já tenho conta (Entrar)</button>
+            </div>
+        </div>
+
+        <!-- 2. TELA DE AUTENTICAÇÃO (LOGIN / CADASTRO) -->
+        <div id="screen-auth" class="screen">
+            <div class="header">
+                <h2>Acesso ao MotoApp</h2>
+            </div>
+            <div class="content">
+                
+                <div class="auth-tabs">
+                    <div class="auth-tab" id="tab-login" onclick="switchAuthTab('login')">Entrar</div>
+                    <div class="auth-tab active" id="tab-register" onclick="switchAuthTab('register')">Cadastrar</div>
+                </div>
+
+                <!-- FORMULÁRIO DE LOGIN -->
+                <form id="loginForm" onsubmit="handleLogin(event)" style="display: none;">
+                    <div class="input-group">
+                        <i class="fa-regular fa-envelope"></i>
+                        <input type="email" class="form-control" id="log-email" placeholder="Seu E-mail" required>
+                    </div>
+                    <div class="input-group">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" class="form-control" id="log-pass" placeholder="Sua Senha" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        Entrar Direto <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </form>
+
+                <!-- FORMULÁRIO DE CADASTRO -->
+                <form id="registerForm" onsubmit="handleRegister(event)">
+                    <div class="role-selector">
+                        <div class="role-btn active" id="role-passenger" onclick="setRole('passenger')">Passageiro</div>
+                        <div class="role-btn" id="role-driver" onclick="setRole('driver')">Moto Táxi</div>
+                    </div>
+
+                    <div class="input-group">
+                        <i class="fa-regular fa-user"></i>
+                        <input type="text" class="form-control" id="reg-name" placeholder="Nome Completo" required>
+                    </div>
+                    <div class="input-group">
+                        <i class="fa-solid fa-mobile-screen-button"></i>
+                        <input type="tel" class="form-control" id="reg-phone" placeholder="Celular (WhatsApp)" required>
+                    </div>
+                    <div class="input-group">
+                        <i class="fa-regular fa-envelope"></i>
+                        <input type="email" class="form-control" id="reg-email" placeholder="Seu E-mail" required>
+                    </div>
+                    
+                    <div id="driver-extra-fields">
+                        <div class="input-group">
+                            <i class="fa-solid fa-motorcycle"></i>
+                            <input type="text" class="form-control" id="reg-moto" placeholder="Modelo da Moto (Ex: CG 160)">
+                        </div>
+                        <div class="input-group">
+                            <i class="fa-solid fa-id-card"></i>
+                            <input type="text" class="form-control" id="reg-plate" placeholder="Placa da Moto (Ex: ABC-1234)">
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" class="form-control" id="reg-pass" placeholder="Crie uma Senha" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        Continuar <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 3. TELA DE VERIFICAÇÃO -->
+        <div id="screen-verify" class="screen">
+            <div class="header">
+                <h2>Verificação de Segurança</h2>
+            </div>
+            <div class="content" style="text-align: center; margin-top: 40px;">
+                <i class="fa-solid fa-envelope-open-text" style="font-size: 4rem; color: var(--primary); margin-bottom: 20px;"></i>
+                <h3 style="margin-bottom: 10px; color: var(--text-dark);">Verifique seu E-mail</h3>
+                <p style="color: var(--text-light); margin-bottom: 30px; font-size: 0.9rem;">Enviamos um código de 4 dígitos para garantir sua segurança.</p>
+                
+                <div class="input-group">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <input type="number" class="form-control" id="verify-code" placeholder="Digite o código (ex: 1234)" style="text-align: center; letter-spacing: 5px; font-weight: bold; font-size: 1.2rem;">
+                </div>
+                
+                <button class="btn btn-primary" onclick="verifyEmail()">Autenticar</button>
+            </div>
+        </div>
+
+        <!-- 4. DASHBOARD DO PASSAGEIRO -->
+        <div id="screen-passenger" class="screen">
+            <div class="header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Olá, <span id="user-name-display">Passageiro</span></h2>
+                <div class="avatar" style="width: 35px; height: 35px;" id="header-pass-avatar"></div>
+            </div>
+            <div class="content">
+                
+                <!-- PAINEL DE BUSCA -->
+                <div id="passenger-search-panel">
+                    <div style="background: white; padding: 16px; border-radius: 16px; box-shadow: var(--card-shadow); margin-bottom: 24px;">
+                        <h3 class="section-title" style="margin-bottom: 12px; font-size: 1rem;"><i class="fa-solid fa-city" style="color:var(--primary);"></i> Formiga, MG</h3>
+                        <p style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 12px;">Cálculo de rota real via satélite (Mapas).</p>
+                        <div class="input-group" style="margin-bottom: 12px;">
+                            <i class="fa-solid fa-location-dot" style="color: var(--primary);"></i>
+                            <input type="text" class="form-control" id="ride-origin" placeholder="Saindo de (Rua, Bairro)" style="background: var(--bg-color); border: none;">
+                        </div>
+                        <div class="input-group" style="margin-bottom: 0;">
+                            <i class="fa-solid fa-flag-checkered" style="color: var(--danger);"></i>
+                            <input type="text" class="form-control" id="ride-destination" placeholder="Indo para (Rua, Bairro)" style="background: var(--bg-color); border: none;">
+                        </div>
+                    </div>
+
+                    <h3 class="section-title">Escolha seu Moto Táxi</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 16px;">Selecione um motorista disponível abaixo:</p>
+                    
+                    <div id="moto-list">
+                        <!-- Gerado pelo JS via LocalStorage -->
+                    </div>
+                </div>
+
+                <!-- CORRIDA ATIVA PASSAGEIRO -->
+                <div id="passenger-active-ride" style="display: none;">
+                    <div class="view-switcher">
+                        <button class="btn btn-outline btn-small" style="background: white;" onclick="navTo('screen-driver')"><i class="fa-solid fa-mobile-screen"></i> App Motorista</button>
+                    </div>
+
+                    <div id="pass-status-badge" class="status-badge">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Aguardando Aceitação do Motorista...
+                    </div>
+                    <div class="sync-text">
+                        <i class="fa-solid fa-rotate"></i> GPS e Status sincronizam em: <strong id="sync-timer-display" style="color: var(--primary);">12</strong>s
+                    </div>
+                    
+                    <div class="map-placeholder map-active">
+                        <div class="map-route-line"></div>
+                        <i class="fa-solid fa-location-crosshairs gps-destination"></i>
+                        <div class="gps-vehicle" id="gps-moto-pass">
+                            <i class="fa-solid fa-motorcycle" style="color: var(--primary);"></i>
+                        </div>
+                    </div>
+
+                    <h3 class="section-title">Motorista Selecionado</h3>
+                    <div class="profile-card" style="flex-direction: row;">
+                        <div class="avatar" id="active-driver-avatar">
+                            <i class="fa-solid fa-helmet-safety"></i>
+                        </div>
+                        <div class="profile-info">
+                            <h4 id="active-driver-name">Nome Motorista</h4>
+                            <p><i class="fa-solid fa-motorcycle"></i> <span id="active-driver-moto">Moto e Placa</span></p>
+                            <p><i class="fa-solid fa-star" style="color: var(--warning);"></i> <span id="active-driver-rating-display">5.0</span> (Público)</p>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <a id="btn-call-driver" href="#" class="btn btn-outline" style="flex: 1; border-color: var(--info); color: var(--info); padding: 12px;">
+                            <i class="fa-solid fa-phone"></i> Ligar
+                        </a>
+                        <button class="btn btn-primary" style="flex: 1; padding: 12px;" onclick="openChat()">
+                            <i class="fa-solid fa-comment-dots"></i> Chat
+                        </button>
+                    </div>
+
+                    <div class="ride-route" style="background: white; padding: 16px; border-radius: 16px;">
+                        <div class="route-point start">
+                            <i class="fa-solid fa-circle"></i>
+                            <strong>Saindo de</strong>
+                            <span id="pass-active-origin">-</span>
+                        </div>
+                        <div class="route-point end" style="margin-bottom: 0;">
+                            <i class="fa-solid fa-location-dot"></i>
+                            <strong>Indo para</strong>
+                            <span id="pass-active-dest">-</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- 5. DASHBOARD DO MOTO TÁXI -->
+        <div id="screen-driver" class="screen">
+            <div class="header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="avatar" style="width: 35px; height: 35px;" id="header-driver-avatar"></div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-light);" id="driver-status-text">Offline</span>
+                    <i class="fa-solid fa-toggle-off" style="color: var(--text-light); font-size: 1.5rem; cursor: pointer;" id="driver-status-btn" onclick="toggleDriverStatus()"></i>
+                </div>
+            </div>
+            <div class="content">
+                
+                <!-- PAINEL DE AGUARDAR CHAMADA -->
+                <div id="driver-waiting-panel">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                        <div>
+                            <p style="color: var(--text-light); font-size: 0.85rem;">Seu valor por Km:</p>
+                            <h3 style="color: var(--text-dark);">R$ <span id="display-price-km">1,50</span>/km</h3>
+                        </div>
+                        <button class="btn btn-outline btn-small" onclick="openPriceModal()"><i class="fa-solid fa-gear"></i> Alterar</button>
+                    </div>
+
+                    <div id="no-rides-msg" style="text-align: center; color: var(--text-light); padding: 40px 0; background: white; border-radius: 16px; box-shadow: var(--card-shadow);">
+                        <i class="fa-solid fa-radar" style="font-size: 3rem; margin-bottom: 16px; opacity: 0.5;"></i>
+                        <p id="radar-text">Fique Online para receber corridas.</p>
+                    </div>
+
+                    <!-- Card de Nova Chamada Direcionada -->
+                    <div id="new-ride-alert" style="display: none; background: white; border-radius: var(--border-radius); padding: 20px; box-shadow: var(--card-shadow); border-top: 5px solid var(--primary);">
+                        <h3 class="section-title" style="color: var(--primary);"><i class="fa-solid fa-bell-ringing"></i> Passageiro Escolheu Você!</h3>
+                        
+                        <div class="ride-route">
+                            <div class="route-point start">
+                                <i class="fa-solid fa-circle"></i>
+                                <strong>Origem</strong>
+                                <span id="req-origin">-</span>
+                            </div>
+                            <div class="route-point end">
+                                <i class="fa-solid fa-location-dot"></i>
+                                <strong>Destino (Formiga, MG)</strong>
+                                <span id="req-destination">-</span>
+                            </div>
+                        </div>
+
+                        <div class="ride-details">
+                            <div class="detail-item">
+                                <span>Distância Real</span>
+                                <strong id="req-distance">-</strong>
+                            </div>
+                            <div class="detail-item">
+                                <span>Ganho Est.</span>
+                                <strong id="req-price">-</strong>
+                            </div>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button class="btn btn-outline" style="flex: 1; border-color: var(--danger); color: var(--danger);" onclick="rejectRide()">Recusar</button>
+                            <button class="btn btn-primary" style="flex: 2;" onclick="acceptRide()">Aceitar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CORRIDA ATIVA MOTORISTA (ETAPAS) -->
+                <div id="driver-active-ride" style="display: none;">
+                    <div class="view-switcher">
+                        <button class="btn btn-outline btn-small" style="background: white;" onclick="navTo('screen-passenger')"><i class="fa-solid fa-mobile-screen"></i> App Passageiro</button>
+                    </div>
+
+                    <!-- Endereços Permanentemente Visíveis -->
+                    <div class="ride-route" style="background: white; padding: 12px 16px; border-radius: 12px; box-shadow: var(--card-shadow); margin-bottom: 16px; margin-top: 40px;">
+                        <div class="route-point end" style="margin-bottom: 0;">
+                            <i class="fa-solid fa-location-dot"></i>
+                            <strong>Destino Final:</strong>
+                            <span id="driver-persistent-dest" style="color: var(--primary); font-weight: 600;">-</span>
+                        </div>
+                    </div>
+
+                    <div class="map-placeholder map-active">
+                        <div class="map-route-line"></div>
+                        <i class="fa-solid fa-location-dot gps-destination"></i>
+                        <div class="gps-vehicle" id="gps-moto-driver">
+                            <i class="fa-solid fa-motorcycle" style="color: var(--primary);"></i>
+                        </div>
+                    </div>
+
+                    <h3 class="section-title">Dados do Passageiro</h3>
+                    <div class="profile-card" style="flex-direction: row;">
+                        <div class="avatar" id="active-pass-avatar">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div class="profile-info">
+                            <h4 id="active-pass-name">Nome do Passageiro</h4>
+                            <p><i class="fa-solid fa-star" style="color: var(--warning);"></i> 5.0 (Passageiro Seguro)</p>
+                            <p id="active-pass-phone-text" style="font-weight: bold; color: var(--text-dark);"><i class="fa-solid fa-mobile-screen"></i> (00) 00000-0000</p>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <a id="btn-call-passenger" href="#" class="btn btn-outline" style="flex: 1; border-color: var(--info); color: var(--info); padding: 12px;">
+                            <i class="fa-solid fa-phone"></i> Ligar
+                        </a>
+                        <button class="btn btn-primary" style="flex: 1; padding: 12px;" onclick="openChat()">
+                            <i class="fa-solid fa-comment-dots"></i> Chat
+                        </button>
+                    </div>
+
+                    <!-- Botões de Status Progressivo -->
+                    <div id="driver-action-area">
+                        <button id="btn-status-1" class="btn btn-info" onclick="updateRideStatus(2)">
+                            <i class="fa-solid fa-route"></i> Estou a Caminho
+                        </button>
+                        <button id="btn-status-2" class="btn btn-primary" style="display:none;" onclick="updateRideStatus(3)">
+                            <i class="fa-solid fa-location-dot"></i> Cheguei ao Local
+                        </button>
+                        <button id="btn-status-3" class="btn btn-info" style="display:none;" onclick="updateRideStatus(4)">
+                            <i class="fa-solid fa-motorcycle"></i> Iniciando Rota ao Destino
+                        </button>
+                        <button id="btn-status-4" class="btn btn-danger" style="display:none;" onclick="updateRideStatus(5)">
+                            <i class="fa-solid fa-flag-checkered"></i> Finalizar Corrida
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- 6. TELA DE HISTÓRICO COM AGRUPAMENTO MENSAL -->
+        <div id="screen-history" class="screen">
+            <div class="header">
+                <h2>Histórico de Corridas</h2>
+            </div>
+            <div class="content">
+                <p style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 16px;">Registro das suas viagens com relatórios mensais.</p>
+                <div id="history-list">
+                    <!-- Gerado pelo JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. TELA DE PERFIL E EDIÇÃO (AMBOS) -->
+        <div id="screen-profile" class="screen">
+            <div class="header">
+                <h2>Meu Perfil</h2>
+            </div>
+            <div class="content">
+                
+                <!-- Modo Visualização -->
+                <div id="profile-view-mode">
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <div class="avatar" id="main-profile-avatar" style="width: 100px; height: 100px; margin: 0 auto 16px; font-size: 3rem; background: var(--white); box-shadow: var(--card-shadow);">
+                        </div>
+                        <h2 id="profile-name" style="color: var(--text-dark);">Nome</h2>
+                        <p id="profile-phone" style="color: var(--text-dark); font-weight: 600; margin-top: 4px;">telefone</p>
+                        <p id="profile-email" style="color: var(--text-light);">email</p>
+                        
+                        <!-- Avaliação Média do Próprio Motorista -->
+                        <div id="profile-my-rating" style="display: none; margin-top: 8px; color: var(--warning); font-weight: bold; font-size: 1.1rem;">
+                            <i class="fa-solid fa-star"></i> <span id="profile-rating-value">5.0</span>
+                        </div>
+                        
+                        <div id="profile-missing-alert" style="display: none; background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; font-size: 0.8rem; margin-top: 10px; border: 1px solid #ffeeba;">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Seu perfil está incompleto. Atualize seus dados.
+                        </div>
+
+                        <div style="margin-top: 10px;">
+                            <span style="background: var(--primary); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;" id="profile-role-badge">Role</span>
+                        </div>
+                    </div>
+
+                    <div class="profile-card" style="flex-direction: column; align-items: flex-start; gap: 8px;" id="profile-driver-details">
+                        <h3 class="section-title" style="margin-bottom: 0;">Dados do Veículo</h3>
+                        <p><strong>Moto:</strong> <span id="profile-moto">-</span></p>
+                        <p><strong>Placa:</strong> <span id="profile-plate">-</span></p>
+                        <p><strong>Tarifa Atual:</strong> R$ <span id="profile-price">1,50</span>/km</p>
+                    </div>
+
+                    <button class="btn btn-primary" style="margin-top: 16px;" onclick="enableProfileEdit()">
+                        <i class="fa-solid fa-pen"></i> Atualizar Dados / Editar Perfil
+                    </button>
+                    
+                    <button class="btn btn-outline" style="border-color: var(--danger); color: var(--danger); margin-top: 16px;" onclick="logout()">
+                        <i class="fa-solid fa-right-from-bracket"></i> Sair da Conta
+                    </button>
+                    <button class="btn btn-outline" style="margin-top: 12px; border: none; font-size: 0.8rem;" onclick="clearData()">
+                        <i class="fa-solid fa-trash"></i> Resetar Todos Dados Salvos
+                    </button>
+                </div>
+
+                <!-- Modo Edição -->
+                <div id="profile-edit-mode" style="display: none;">
+                    <h3 class="section-title"><i class="fa-solid fa-pen-to-square"></i> Editar Informações</h3>
+                    <form onsubmit="handleProfileUpdate(event)">
+                        <div class="input-group">
+                            <i class="fa-regular fa-user"></i>
+                            <input type="text" class="form-control" id="edit-name" placeholder="Nome Completo" required>
+                        </div>
+                        <div class="input-group">
+                            <i class="fa-solid fa-mobile-screen-button"></i>
+                            <input type="tel" class="form-control" id="edit-phone" placeholder="Celular (WhatsApp)" required>
+                        </div>
+                        
+                        <div id="edit-driver-extra-fields">
+                            <div class="input-group">
+                                <i class="fa-solid fa-motorcycle"></i>
+                                <input type="text" class="form-control" id="edit-moto" placeholder="Modelo da Moto">
+                            </div>
+                            <div class="input-group">
+                                <i class="fa-solid fa-id-card"></i>
+                                <input type="text" class="form-control" id="edit-plate" placeholder="Placa">
+                            </div>
+                        </div>
+                        
+                        <p style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 16px;"><i class="fa-solid fa-shield"></i> Será necessária verificação por e-mail para salvar.</p>
+
+                        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                        <button type="button" class="btn btn-outline" style="margin-top: 10px;" onclick="cancelProfileEdit()">Cancelar</button>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- === LÓGICA JAVASCRIPT === -->
+    <script>
+        // === BANCO DE DADOS LOCAL ===
+        let appUsers = JSON.parse(localStorage.getItem('motoAppUsers')) || [];
+        let currentUser = JSON.parse(localStorage.getItem('motoAppCurrent')) || null;
+        let rideHistoryDB = JSON.parse(localStorage.getItem('motoAppHistory')) || [];
+        
+        let tempRegData = { role: 'passenger' };
+        let currentRideData = { chat: [] };
+        let rideStatusState = 0; // 0=none, 1=accepted, 2=onWay, 3=arrived, 4=inTransit
+
+        // Controle de Estado de Edição e Chat
+        let isUpdatingProfile = false;
+        let chatInterval = null;
+
+        // Variáveis do Timer do Passageiro
+        let passengerSyncTimer;
+        let passengerTimeLeft = 12; 
+
+        // Gerador de Avatar
+        function getAvatarUrl(name) {
+            return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=00C853&color=fff&size=128&font-size=0.4`;
+        }
+
+        // Inicialização e Auto-Login
+        function initApp() {
+            if(currentUser) {
+                document.getElementById('main-bottom-nav').style.display = 'flex';
+                
+                const avImg = `<img src="${currentUser.avatar || getAvatarUrl(currentUser.name)}">`;
+                document.getElementById('header-pass-avatar').innerHTML = avImg;
+                document.getElementById('header-driver-avatar').innerHTML = avImg;
+
+                if(currentUser.role === 'passenger') {
+                    document.getElementById('user-name-display').innerText = currentUser.name.split(' ')[0];
+                    renderMotoList();
+                    navTo('screen-passenger');
+                } else {
+                    document.getElementById('input-price-km').value = currentUser.priceKm.toFixed(2);
+                    document.getElementById('display-price-km').innerText = currentUser.priceKm.toFixed(2).replace('.', ',');
+                    syncDriverUIStatus();
+                    navTo('screen-driver');
+                }
+            }
+        }
+
+        // 1. Navegação Base e Abas
+        function navTo(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+
+            if(screenId === 'screen-home' || screenId === 'screen-auth' || screenId === 'screen-verify') {
+                document.getElementById('main-bottom-nav').style.display = 'none';
+            } else {
+                document.getElementById('main-bottom-nav').style.display = 'flex';
+            }
+        }
+
+        function navToAuth(tab) {
+            navTo('screen-auth');
+            switchAuthTab(tab);
+        }
+
+        function switchAuthTab(tab) {
+            document.getElementById('tab-login').classList.remove('active');
+            document.getElementById('tab-register').classList.remove('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+
+            if(tab === 'login') {
+                document.getElementById('loginForm').style.display = 'block';
+                document.getElementById('registerForm').style.display = 'none';
+            } else {
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('registerForm').style.display = 'block';
+            }
+        }
+
+        function openDashboard() {
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.getElementById('nav-home').classList.add('active');
+            if(currentUser.role === 'passenger') {
+                renderMotoList();
+                navTo('screen-passenger');
+            } else {
+                navTo('screen-driver');
+            }
+        }
+
+        function openHistory() {
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.getElementById('nav-history').classList.add('active');
+            
+            const listDiv = document.getElementById('history-list');
+            let historyHTML = '';
+
+            const myHistory = rideHistoryDB.filter(h => h.passEmail === currentUser.email || h.driverEmail === currentUser.email).reverse();
+
+            if(myHistory.length === 0) {
+                listDiv.innerHTML = `<p style="text-align:center; color: var(--text-light); padding: 20px;">Você ainda não possui viagens registradas.</p>`;
+            } else {
+                // Lógica de agrupamento Mensal
+                const groupedHistory = {};
+                myHistory.forEach(ride => {
+                    // data formata: "DD/MM/YYYY, HH:MM:SS" -> Pega o "MM/YYYY"
+                    const parts = ride.date.split(',')[0].split('/');
+                    if(parts.length >= 3) {
+                        const monthYear = parts[1] + '/' + parts[2];
+                        if(!groupedHistory[monthYear]) groupedHistory[monthYear] = { rides: [], total: 0 };
+                        groupedHistory[monthYear].rides.push(ride);
+                        groupedHistory[monthYear].total += parseFloat(ride.price.replace(',', '.'));
+                    }
+                });
+
+                for(const [monthYear, data] of Object.entries(groupedHistory)) {
+                    historyHTML += `
+                        <div class="history-month-badge">
+                            <span><i class="fa-regular fa-calendar-days"></i> Mês: ${monthYear}</span>
+                            <span>Total Movimentado: R$ ${data.total.toFixed(2).replace('.', ',')}</span>
+                        </div>
+                    `;
+
+                    data.rides.forEach(ride => {
+                        const otherPerson = currentUser.role === 'passenger' ? `Moto: ${ride.driver}` : `Passageiro: ${ride.passenger}`;
+                        historyHTML += `
+                            <div class="history-card">
+                                <div class="history-header">
+                                    <span><i class="fa-regular fa-calendar"></i> ${ride.date}</span>
+                                    <span><i class="fa-solid fa-road"></i> ${ride.dist} km</span>
+                                </div>
+                                <p style="font-weight: 600; color: var(--text-dark); margin-bottom: 4px;">${otherPerson}</p>
+                                <p style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 2px;"><i class="fa-solid fa-circle" style="font-size: 8px; color: var(--primary);"></i> ${ride.origin}</p>
+                                <p style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 12px;"><i class="fa-solid fa-location-dot" style="font-size: 10px; color: var(--danger);"></i> ${ride.dest}</p>
+                                <div style="text-align: right;">
+                                    <span class="history-price">R$ ${ride.price}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                listDiv.innerHTML = historyHTML;
+            }
+            navTo('screen-history');
+        }
+
+        // --- SISTEMA DE PERFIL E ATUALIZAÇÃO ---
+        function openProfile() {
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.getElementById('nav-profile').classList.add('active');
+            
+            document.getElementById('profile-view-mode').style.display = 'block';
+            document.getElementById('profile-edit-mode').style.display = 'none';
+
+            document.getElementById('main-profile-avatar').innerHTML = `<img src="${currentUser.avatar || getAvatarUrl(currentUser.name)}">`;
+            document.getElementById('profile-name').innerText = currentUser.name;
+            document.getElementById('profile-email').innerText = currentUser.email;
+            document.getElementById('profile-phone').innerText = currentUser.phone || "Telefone não cadastrado";
+            
+            if(!currentUser.phone || currentUser.phone === "") {
+                document.getElementById('profile-missing-alert').style.display = 'block';
+            } else {
+                document.getElementById('profile-missing-alert').style.display = 'none';
+            }
+
+            if(currentUser.role === 'driver') {
+                document.getElementById('profile-role-badge').innerText = "Motorista Parceiro";
+                document.getElementById('profile-driver-details').style.display = 'flex';
+                document.getElementById('profile-moto').innerText = currentUser.moto || "-";
+                document.getElementById('profile-plate').innerText = currentUser.plate || "-";
+                document.getElementById('profile-price').innerText = currentUser.priceKm.toFixed(2).replace('.', ',');
+                
+                document.getElementById('profile-my-rating').style.display = 'block';
+                document.getElementById('profile-rating-value').innerText = currentUser.rating || "5.0";
+            } else {
+                document.getElementById('profile-role-badge').innerText = "Passageiro";
+                document.getElementById('profile-driver-details').style.display = 'none';
+                document.getElementById('profile-my-rating').style.display = 'none';
+            }
+            
+            navTo('screen-profile');
+        }
+
+        function enableProfileEdit() {
+            document.getElementById('profile-view-mode').style.display = 'none';
+            document.getElementById('profile-edit-mode').style.display = 'block';
+
+            document.getElementById('edit-name').value = currentUser.name;
+            document.getElementById('edit-phone').value = currentUser.phone || "";
+            
+            if(currentUser.role === 'driver') {
+                document.getElementById('edit-driver-extra-fields').style.display = 'block';
+                document.getElementById('edit-moto').value = currentUser.moto || "";
+                document.getElementById('edit-plate').value = currentUser.plate || "";
+            } else {
+                document.getElementById('edit-driver-extra-fields').style.display = 'none';
+            }
+        }
+
+        function cancelProfileEdit() {
+            document.getElementById('profile-view-mode').style.display = 'block';
+            document.getElementById('profile-edit-mode').style.display = 'none';
+        }
+
+        function handleProfileUpdate(event) {
+            event.preventDefault();
+            isUpdatingProfile = true;
+
+            tempRegData = JSON.parse(JSON.stringify(currentUser));
+            tempRegData.name = document.getElementById('edit-name').value;
+            tempRegData.phone = document.getElementById('edit-phone').value;
+            tempRegData.avatar = getAvatarUrl(tempRegData.name); 
+
+            if(currentUser.role === 'driver') {
+                tempRegData.moto = document.getElementById('edit-moto').value;
+                tempRegData.plate = document.getElementById('edit-plate').value;
+            }
+
+            alert("Para salvar as alterações, por favor, verifique seu e-mail.");
+            navTo('screen-verify');
+        }
+
+        // 2. Autenticação 
+        function setRole(role) {
+            tempRegData.role = role;
+            document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('role-' + role).classList.add('active');
+
+            if(role === 'driver') {
+                document.getElementById('driver-extra-fields').style.display = 'block';
+                document.getElementById('reg-moto').required = true;
+                document.getElementById('reg-plate').required = true;
+            } else {
+                document.getElementById('driver-extra-fields').style.display = 'none';
+                document.getElementById('reg-moto').required = false;
+                document.getElementById('reg-plate').required = false;
+            }
+        }
+
+        function handleRegister(event) {
+            event.preventDefault();
+            
+            const nameStr = document.getElementById('reg-name').value;
+            tempRegData = {
+                role: tempRegData.role || 'passenger',
+                name: nameStr,
+                phone: document.getElementById('reg-phone').value,
+                email: document.getElementById('reg-email').value,
+                password: document.getElementById('reg-pass').value,
+                avatar: getAvatarUrl(nameStr)
+            };
+            
+            if(appUsers.some(u => u.email === tempRegData.email)) {
+                alert("Este e-mail já está cadastrado. Faça login.");
+                return;
+            }
+
+            if(tempRegData.role === 'driver') {
+                tempRegData.moto = document.getElementById('reg-moto').value;
+                tempRegData.plate = document.getElementById('reg-plate').value;
+                tempRegData.priceKm = 1.50; 
+                tempRegData.rating = "5.0";
+                tempRegData.ratingSum = 5.0; // Sistema de media
+                tempRegData.ratingCount = 1;
+                tempRegData.isOnline = false;
+            }
+            
+            isUpdatingProfile = false; 
+            navTo('screen-verify');
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('log-email').value;
+            const pass = document.getElementById('log-pass').value;
+
+            const user = appUsers.find(u => u.email === email && u.password === pass);
+            
+            if(user) {
+                if(!user.avatar) user.avatar = getAvatarUrl(user.name);
+                
+                currentUser = JSON.parse(JSON.stringify(user)); 
+                localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
+                initApp(); 
+            } else {
+                alert("E-mail ou senha incorretos.");
+            }
+        }
+
+        function verifyEmail() {
+            const code = document.getElementById('verify-code').value;
+            if(code.length > 0) {
+                if(isUpdatingProfile) {
+                    currentUser = JSON.parse(JSON.stringify(tempRegData));
+                    localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
+                    updateDriverInDB(currentUser);
+                    isUpdatingProfile = false;
+                    alert("Perfil atualizado com sucesso!");
+                    openProfile(); 
+                } else {
+                    const newUser = JSON.parse(JSON.stringify(tempRegData));
+                    appUsers.push(newUser);
+                    localStorage.setItem('motoAppUsers', JSON.stringify(appUsers));
+                    
+                    currentUser = newUser;
+                    localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
+                    initApp();
+                }
+            } else {
+                alert("Por favor, digite o código de verificação.");
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('motoAppCurrent');
+            currentUser = null;
+            navTo('screen-home');
+        }
+
+        function clearData() {
+            if(confirm("Isso apagará todos os cadastros e histórico do banco de dados. Tem certeza?")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        function updateDriverInDB(driverData) {
+            const index = appUsers.findIndex(u => u.email === driverData.email);
+            if(index > -1) {
+                appUsers[index] = driverData;
+                localStorage.setItem('motoAppUsers', JSON.stringify(appUsers));
+            }
+        }
+
+        // 3. Interface Motorista
+        function openPriceModal() { document.getElementById('modal-price').style.display = 'flex'; }
+        function closePriceModal() { document.getElementById('modal-price').style.display = 'none'; }
+
+        function savePriceModal() {
+            const newPrice = parseFloat(document.getElementById('input-price-km').value);
+            if(!isNaN(newPrice) && newPrice > 0) {
+                currentUser.priceKm = newPrice;
+                localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
+                updateDriverInDB(currentUser);
+
+                document.getElementById('display-price-km').innerText = newPrice.toFixed(2).replace('.', ',');
+                closePriceModal();
+            }
+        }
+
+        function toggleDriverStatus() {
+            currentUser.isOnline = !currentUser.isOnline;
+            localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
+            updateDriverInDB(currentUser);
+            syncDriverUIStatus();
+        }
+
+        function syncDriverUIStatus() {
+            const btn = document.getElementById('driver-status-btn');
+            const text = document.getElementById('driver-status-text');
+            const radar = document.getElementById('radar-text');
+            
+            if(currentUser.isOnline) {
+                btn.className = "fa-solid fa-toggle-on";
+                btn.style.color = "var(--primary)";
+                text.innerText = "Online"; 
+                text.style.color = "var(--primary)";
+                radar.innerText = "Aguardando chamadas... Seu GPS está ativo em Formiga, MG.";
+            } else {
+                btn.className = "fa-solid fa-toggle-off";
+                btn.style.color = "var(--text-light)";
+                text.innerText = "Offline"; 
+                text.style.color = "var(--text-light)";
+                radar.innerText = "Fique Online para aparecer na lista e receber corridas.";
+            }
+        }
+
+        // 4. Interface Passageiro e Motoristas
+        function renderMotoList() {
+            const listDiv = document.getElementById('moto-list');
+            listDiv.innerHTML = '';
+
+            const latestAppUsers = JSON.parse(localStorage.getItem('motoAppUsers')) || [];
+            const drivers = latestAppUsers.filter(u => u.role === 'driver');
+
+            if(drivers.length === 0) {
+                listDiv.innerHTML = `<p style="color:var(--text-light); text-align:center; padding: 20px; background: white; border-radius: 12px;">Nenhum Moto Táxi cadastrado na plataforma ainda.</p>`;
+                return;
+            }
+
+            drivers.forEach(moto => {
+                const statusText = moto.isOnline ? "Online" : "Offline";
+                const statusClass = moto.isOnline ? "status-online" : "status-offline";
+                const btnDisabled = !moto.isOnline ? "disabled" : "";
+                const btnStyle = !moto.isOnline ? "background: #bdc3c7; box-shadow: none; cursor: not-allowed;" : "";
+
+                listDiv.innerHTML += `
+                    <div class="profile-card">
+                        <div class="profile-header">
+                            <div class="avatar">
+                                <img src="${moto.avatar || getAvatarUrl(moto.name)}">
+                            </div>
+                            <div class="profile-info">
+                                <h4>${moto.name}</h4>
+                                <p><span class="status-dot ${statusClass}"></span> ${statusText}</p>
+                                <p>
+                                    <i class="fa-solid fa-star" style="color: var(--warning);"></i> ${moto.rating || "5.0"} &bull; 
+                                    R$ ${moto.priceKm.toFixed(2).replace('.',',')}/km
+                                </p>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-small" style="width: 100%; ${btnStyle}" ${btnDisabled} onclick="simulateRideRequest('${moto.email}', this)">
+                            <i class="fa-solid fa-motorcycle"></i> Solicitar a ${moto.name.split(' ')[0]}
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        // CÁLCULO DE ROTA REAL
+        async function getRealDistanceApi(orig, dest) {
+            try {
+                const q1 = encodeURIComponent(orig + ", Formiga, Minas Gerais, Brasil");
+                const q2 = encodeURIComponent(dest + ", Formiga, Minas Gerais, Brasil");
+
+                const res1 = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q1}`);
+                const data1 = await res1.json();
+
+                const res2 = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q2}`);
+                const data2 = await res2.json();
+
+                if(data1.length > 0 && data2.length > 0) {
+                    const lat1 = parseFloat(data1[0].lat);
+                    const lon1 = parseFloat(data1[0].lon);
+                    const lat2 = parseFloat(data2[0].lat);
+                    const lon2 = parseFloat(data2[0].lon);
+
+                    const R = 6371; 
+                    const dLat = (lat2-lat1) * Math.PI / 180;
+                    const dLon = (lon2-lon1) * Math.PI / 180;
+                    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                              Math.sin(dLon/2) * Math.sin(dLon/2);
+                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                    let distance = R * c;
+
+                    distance = distance * 1.3;
+                    
+                    if(distance < 0.5) distance = 0.5; 
+                    return distance.toFixed(1);
+                } else {
+                    throw new Error("Endereço exato não encontrado");
+                }
+            } catch(e) {
+                console.log("Fallback ativado:", e);
+                const combined = orig.toLowerCase() + dest.toLowerCase();
+                let hash = 0;
+                for(let i = 0; i < combined.length; i++) {
+                    hash = ((hash << 5) - hash) + combined.charCodeAt(i);
+                    hash |= 0;
+                }
+                let dist = (Math.abs(hash) % 110) / 10 + 1.5; 
+                return dist.toFixed(1);
+            }
+        }
+
+        // 5. Pedido Direcionado
+        async function simulateRideRequest(driverEmail, btnElement) {
+            const origin = document.getElementById('ride-origin').value;
+            const dest = document.getElementById('ride-destination').value;
+            
+            if(!origin || !dest) {
+                alert("Por favor, preencha a origem e o destino na cidade de Formiga-MG.");
+                return;
+            }
+
+            const latestAppUsers = JSON.parse(localStorage.getItem('motoAppUsers')) || [];
+            const selectedDriver = latestAppUsers.find(u => u.email === driverEmail);
+            
+            if(!selectedDriver || !selectedDriver.isOnline) {
+                alert("Este motorista não está mais disponível.");
+                renderMotoList();
+                return;
+            }
+
+            const originalText = btnElement.innerHTML;
+            btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Calculando Rota...';
+            btnElement.disabled = true;
+
+            const calculatedDistance = await getRealDistanceApi(origin, dest); 
+            
+            btnElement.innerHTML = originalText;
+            btnElement.disabled = false;
+
+            const price = (5.00 + (calculatedDistance * selectedDriver.priceKm)).toFixed(2);
+
+            currentRideData = { origin, dest, dist: calculatedDistance, price, driver: selectedDriver, pass: currentUser, chat: [] };
+
+            // Passageiro UI Wait
+            document.getElementById('passenger-search-panel').style.display = 'none';
+            document.getElementById('passenger-active-ride').style.display = 'block';
+            
+            document.getElementById('active-driver-avatar').innerHTML = `<img src="${selectedDriver.avatar || getAvatarUrl(selectedDriver.name)}">`;
+            document.getElementById('active-driver-name').innerText = currentRideData.driver.name;
+            document.getElementById('active-driver-moto').innerText = currentRideData.driver.moto + " | " + currentRideData.driver.plate;
+            document.getElementById('active-driver-rating-display').innerText = selectedDriver.rating || "5.0";
+            
+            document.getElementById('btn-call-driver').href = `tel:${selectedDriver.phone}`;
+            document.getElementById('pass-active-origin').innerText = currentRideData.origin + ", Formiga - MG";
+            document.getElementById('pass-active-dest').innerText = currentRideData.dest + ", Formiga - MG";
+            
+            const passBadge = document.getElementById('pass-status-badge');
+            passBadge.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Aguardando Aceite do Motorista...`;
+            passBadge.style.background = 'var(--bg-color)';
+            passBadge.style.color = 'var(--primary)';
+
+            document.getElementById('sync-timer-display').innerText = "12";
+
+            // Motorista Alerta
+            document.getElementById('req-origin').innerText = origin + " (Formiga)";
+            document.getElementById('req-destination').innerText = dest + " (Formiga)";
+            document.getElementById('req-distance').innerText = calculatedDistance + ' km';
+            document.getElementById('req-price').innerText = 'R$ ' + price.replace('.', ',');
+
+            document.getElementById('no-rides-msg').style.display = 'none';
+            document.getElementById('new-ride-alert').style.display = 'block';
+            
+            alert(`Pedido enviado para ${selectedDriver.name}. Trocando para a visão do motorista para aceite.`);
+            navTo('screen-driver'); 
+        }
+
+        // 6. Aceite e Atualizações de GPS com Delay
+        function startPassengerSyncTimer() {
+            clearInterval(passengerSyncTimer);
+            passengerTimeLeft = 12; 
+            document.getElementById('sync-timer-display').innerText = passengerTimeLeft;
+
+            passengerSyncTimer = setInterval(() => {
+                passengerTimeLeft--;
+                document.getElementById('sync-timer-display').innerText = passengerTimeLeft;
+
+                if(passengerTimeLeft <= 0) {
+                    passengerTimeLeft = 12; 
+                    syncPassengerUI(); 
+                }
+            }, 1000);
+        }
+
+        function rejectRide() {
+            document.getElementById('new-ride-alert').style.display = 'none';
+            document.getElementById('no-rides-msg').style.display = 'block';
+            
+            document.getElementById('passenger-active-ride').style.display = 'none';
+            document.getElementById('passenger-search-panel').style.display = 'block';
+            alert("O motorista recusou a corrida.");
+            if(currentUser.role === 'passenger') navTo('screen-passenger');
+        }
+
+        function acceptRide() {
+            document.getElementById('driver-waiting-panel').style.display = 'none';
+            document.getElementById('driver-active-ride').style.display = 'block';
+            
+            document.getElementById('active-pass-avatar').innerHTML = `<img src="${currentRideData.pass.avatar || getAvatarUrl(currentRideData.pass.name)}">`;
+            document.getElementById('active-pass-name').innerText = currentRideData.pass.name;
+            document.getElementById('active-pass-phone-text').innerHTML = `<i class="fa-solid fa-mobile-screen"></i> ${currentRideData.pass.phone || 'Sem Telefone'}`;
+            document.getElementById('btn-call-passenger').href = `tel:${currentRideData.pass.phone}`;
+            
+            document.getElementById('driver-persistent-dest').innerText = currentRideData.dest + ", Formiga - MG";
+
+            rideStatusState = 1;
+            syncDriverUI(); 
+            startPassengerSyncTimer(); 
+        }
+
+        function updateRideStatus(newStatus) {
+            rideStatusState = newStatus;
+            syncDriverUI(); 
+            
+            if(newStatus === 5) { 
+                clearInterval(passengerSyncTimer);
+                finishRide();
+            }
+        }
+
+        function syncDriverUI() {
+            const b1 = document.getElementById('btn-status-1');
+            const b2 = document.getElementById('btn-status-2');
+            const b3 = document.getElementById('btn-status-3');
+            const b4 = document.getElementById('btn-status-4');
+            const gpsMotoDriver = document.getElementById('gps-moto-driver');
+
+            b1.style.display = 'none'; b2.style.display = 'none'; b3.style.display = 'none'; b4.style.display = 'none';
+
+            if(rideStatusState === 1) { 
+                b1.style.display = 'flex';
+                gpsMotoDriver.style.left = '10%';
+            } 
+            else if(rideStatusState === 2) { 
+                b2.style.display = 'flex';
+                gpsMotoDriver.style.left = '30%';
+            }
+            else if(rideStatusState === 3) { 
+                b3.style.display = 'flex';
+            }
+            else if(rideStatusState === 4) { 
+                b4.style.display = 'flex';
+                gpsMotoDriver.style.left = '80%';
+            }
+        }
+
+        function syncPassengerUI() {
+            const passBadge = document.getElementById('pass-status-badge');
+            const gpsMotoPass = document.getElementById('gps-moto-pass');
+
+            if(rideStatusState === 1) { 
+                passBadge.innerHTML = `<i class="fa-solid fa-check-double"></i> O Motorista Aceitou a Corrida!`;
+                gpsMotoPass.style.left = '10%'; 
+            } 
+            else if(rideStatusState === 2) { 
+                passBadge.innerHTML = `<i class="fa-solid fa-motorcycle"></i> Motorista está a Caminho`;
+                gpsMotoPass.style.left = '30%'; 
+            }
+            else if(rideStatusState === 3) { 
+                passBadge.innerHTML = `<i class="fa-solid fa-street-view"></i> Motorista Chegou ao Local!`;
+                passBadge.style.background = 'var(--primary)';
+                passBadge.style.color = 'white';
+            }
+            else if(rideStatusState === 4) { 
+                passBadge.innerHTML = `<i class="fa-solid fa-route"></i> Em Viagem para o Destino`;
+                passBadge.style.background = 'var(--bg-color)';
+                passBadge.style.color = 'var(--primary)';
+                gpsMotoPass.style.left = '80%'; 
+            }
+        }
+
+        // --- SISTEMA DE AVALIAÇÃO E FINALIZAÇÃO ---
+        function finishRide() {
+            alert("Corrida finalizada com sucesso! A viagem foi salva no histórico.");
+            
+            rideHistoryDB.push({
+                date: new Date().toLocaleString('pt-BR'),
+                driver: currentRideData.driver.name,
+                passenger: currentRideData.pass.name,
+                driverEmail: currentRideData.driver.email,
+                passEmail: currentRideData.pass.email,
+                origin: currentRideData.origin + " (Formiga)",
+                dest: currentRideData.dest + " (Formiga)",
+                price: currentRideData.price.replace('.', ','),
+                dist: currentRideData.dist
+            });
+            localStorage.setItem('motoAppHistory', JSON.stringify(rideHistoryDB));
+
+            if(currentUser.role === 'passenger') {
+                document.getElementById('modal-rating').style.display = 'flex';
+                document.getElementById('rating-driver-name').innerText = currentRideData.driver.name;
+                window.tempRatingDriverEmail = currentRideData.driver.email;
+                window.tempSelectedRating = 5;
+                updateStarUI(5);
+            } else {
+                resetRideUI();
+                navTo('screen-driver');
+            }
+        }
+
+        function setRatingVal(val) {
+            window.tempSelectedRating = val;
+            updateStarUI(val);
+        }
+
+        function updateStarUI(val) {
+            const stars = document.querySelectorAll('#star-rating i');
+            stars.forEach(s => {
+                if(parseInt(s.getAttribute('data-val')) <= val) {
+                    s.style.color = 'var(--warning)';
+                } else {
+                    s.style.color = '#e1e8ed';
+                }
+            });
+        }
+
+        function submitRating() {
+            const drivers = JSON.parse(localStorage.getItem('motoAppUsers')) || [];
+            const dIndex = drivers.findIndex(u => u.email === window.tempRatingDriverEmail);
+            if(dIndex > -1) {
+                let drv = drivers[dIndex];
+                if(!drv.ratingSum) { drv.ratingSum = parseFloat(drv.rating || 5); drv.ratingCount = 1; }
+                drv.ratingSum += window.tempSelectedRating;
+                drv.ratingCount += 1;
+                drv.rating = (drv.ratingSum / drv.ratingCount).toFixed(1);
+                drivers[dIndex] = drv;
+                localStorage.setItem('motoAppUsers', JSON.stringify(drivers));
+            }
+            document.getElementById('modal-rating').style.display = 'none';
+            alert("Avaliação registrada com sucesso!");
+            resetRideUI();
+            navTo('screen-passenger');
+        }
+
+        function skipRating() {
+            document.getElementById('modal-rating').style.display = 'none';
+            resetRideUI();
+            navTo('screen-passenger');
+        }
+
+        function resetRideUI() {
+            document.getElementById('driver-active-ride').style.display = 'none';
+            document.getElementById('driver-waiting-panel').style.display = 'block';
+            document.getElementById('new-ride-alert').style.display = 'none';
+            document.getElementById('no-rides-msg').style.display = 'block';
+
+            document.getElementById('passenger-active-ride').style.display = 'none';
+            document.getElementById('passenger-search-panel').style.display = 'block';
+            document.getElementById('ride-origin').value = '';
+            document.getElementById('ride-destination').value = '';
+
+            rideStatusState = 0;
+            currentRideData = { chat: [] }; 
+            closeChat(); 
+
+            document.getElementById('gps-moto-pass').style.left = '10%';
+            document.getElementById('gps-moto-driver').style.left = '10%';
+        }
+
+        // --- SISTEMA DE CHAT DIFERENCIADO ---
+        function openChat() {
+            document.getElementById('modal-chat').style.display = 'flex';
+            renderChat();
+            clearInterval(chatInterval);
+            chatInterval = setInterval(renderChat, 1500); 
+        }
+
+        function closeChat() {
+            document.getElementById('modal-chat').style.display = 'none';
+            clearInterval(chatInterval);
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const msgText = input.value.trim();
+            
+            if(msgText !== "") {
+                const message = {
+                    senderEmail: currentUser.email,
+                    role: currentUser.role, // Salva o papel de quem enviou
+                    text: msgText,
+                    time: new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})
+                };
+                
+                currentRideData.chat.push(message);
+                input.value = '';
+                renderChat();
+            }
+        }
+
+        function renderChat() {
+            if(!currentRideData || !currentRideData.chat) return;
+            
+            const chatBox = document.getElementById('chat-messages');
+            chatBox.innerHTML = '';
+
+            if(currentRideData.chat.length === 0) {
+                chatBox.innerHTML = '<p style="text-align:center; color: var(--text-light); margin-top: 20px;">Nenhuma mensagem ainda.</p>';
+                return;
+            }
+
+            currentRideData.chat.forEach(msg => {
+                const isMe = msg.senderEmail === currentUser.email;
+                const bubbleClass = isMe ? 'chat-sent' : 'chat-received';
+                
+                // Identificador Visual do Remetente
+                let roleLabelHTML = '';
+                if(msg.role === 'driver') {
+                    roleLabelHTML = `<div class="chat-role-label" style="color: ${isMe ? '#e1e8ed' : 'var(--primary)'};"><i class="fa-solid fa-motorcycle"></i> Motorista</div>`;
+                } else {
+                    roleLabelHTML = `<div class="chat-role-label" style="color: ${isMe ? '#e1e8ed' : '#3498db'};"><i class="fa-solid fa-user"></i> Passageiro</div>`;
+                }
+
+                chatBox.innerHTML += `
+                    <div class="chat-bubble ${bubbleClass}">
+                        ${roleLabelHTML}
+                        <span>${msg.text}</span>
+                        <div style="font-size: 0.65rem; text-align: right; margin-top: 4px; opacity: 0.7;">${msg.time}</div>
+                    </div>
+                `;
+            });
+
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+    </script>
+</body>
+</html>
