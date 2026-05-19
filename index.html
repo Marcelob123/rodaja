@@ -391,7 +391,7 @@
             animation: fadeIn 0.3s ease;
         }
 
-        /* === MAPAS E CARDS (GPS ANIMADO) === */
+        /* === MAPAS E CARDS === */
         .map-placeholder {
             width: 100%;
             height: 200px;
@@ -1239,8 +1239,6 @@
     <script>
         // === BANCO DE DADOS LOCAL E ESTADOS ===
         let currentUser = JSON.parse(localStorage.getItem('motoAppCurrent')) || null;
-        let rideHistoryDB = JSON.parse(localStorage.getItem('motoAppHistory')) || [];
-        
         let tempRegData = { role: 'passenger' };
         let currentRideData = { chat: [] };
         let rideStatusState = 0; 
@@ -1250,7 +1248,7 @@
         let passengerSyncTimer;
         let passengerTimeLeft = 12; 
 
-        // API URL (Substituído com sucesso!)
+        // API URL DEFINITIVA
         const API_URL = 'https://financelypro.com.br/rodaja/api.php';
 
         function getAvatarUrl(name) {
@@ -1268,7 +1266,7 @@
 
                 if(currentUser.role === 'passenger') {
                     document.getElementById('user-name-display').innerText = currentUser.nome.split(' ')[0];
-                    renderMotoList(); // AGORA CHAMA A API NA INICIALIZAÇÃO!
+                    renderMotoList(); 
                     navTo('screen-passenger');
                 } else {
                     syncDriverPriceUI();
@@ -1320,6 +1318,71 @@
             }
         }
 
+        // --- SISTEMA DE HISTÓRICO VIA NUVEM ---
+        async function openHistory() {
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.getElementById('nav-history').classList.add('active');
+            
+            const listDiv = document.getElementById('history-list');
+            listDiv.innerHTML = '<p style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando histórico...</p>';
+
+            try {
+                const response = await fetch(`${API_URL}?acao=listar_historico&email=${encodeURIComponent(currentUser.email)}`);
+                const resultado = await response.json();
+
+                if(resultado.sucesso) {
+                    const myHistory = resultado.historico;
+                    let historyHTML = '';
+
+                    if(myHistory.length === 0) {
+                        listDiv.innerHTML = `<p style="text-align:center; color: var(--text-light); padding: 20px;">Você ainda não possui viagens registradas.</p>`;
+                    } else {
+                        const groupedHistory = {};
+                        myHistory.forEach(ride => {
+                            const parts = ride.date.split(',')[0].split('/');
+                            if(parts.length >= 3) {
+                                const monthYear = parts[1] + '/' + parts[2];
+                                if(!groupedHistory[monthYear]) groupedHistory[monthYear] = { rides: [], total: 0 };
+                                groupedHistory[monthYear].rides.push(ride);
+                                groupedHistory[monthYear].total += parseFloat(ride.preco.replace(',', '.'));
+                            }
+                        });
+
+                        for(const [monthYear, data] of Object.entries(groupedHistory)) {
+                            historyHTML += `
+                                <div class="history-month-badge">
+                                    <span><i class="fa-regular fa-calendar-days"></i> Mês: ${monthYear}</span>
+                                    <span>Total Movimentado: R$ ${data.total.toFixed(2).replace('.', ',')}</span>
+                                </div>
+                            `;
+
+                            data.rides.forEach(ride => {
+                                const otherPerson = currentUser.role === 'passenger' ? `Moto: ${ride.driverNome}` : `Passageiro: ${ride.passNome}`;
+                                historyHTML += `
+                                    <div class="history-card">
+                                        <div class="history-header">
+                                            <span><i class="fa-regular fa-calendar"></i> ${ride.date}</span>
+                                            <span><i class="fa-solid fa-road"></i> ${ride.distancia} km</span>
+                                        </div>
+                                        <p style="font-weight: 600; color: var(--text-dark); margin-bottom: 4px;">${otherPerson}</p>
+                                        <p style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 2px;"><i class="fa-solid fa-circle" style="font-size: 8px; color: var(--primary);"></i> ${ride.origem}</p>
+                                        <p style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 12px;"><i class="fa-solid fa-location-dot" style="font-size: 10px; color: var(--danger);"></i> ${ride.destino}</p>
+                                        <div style="text-align: right;">
+                                            <span class="history-price">R$ ${ride.preco}</span>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                        }
+                        listDiv.innerHTML = historyHTML;
+                    }
+                }
+            } catch (e) {
+                listDiv.innerHTML = `<p style="text-align:center; color: var(--danger);">Erro ao buscar histórico.</p>`;
+            }
+            navTo('screen-history');
+        }
+
         // --- SISTEMA DE AUTENTICAÇÃO VIA PHP (NUVEM) ---
         function setRole(role) {
             tempRegData.role = role;
@@ -1363,14 +1426,10 @@
             const code = document.getElementById('verify-code').value;
             if(code.length > 0) {
                 if(isUpdatingProfile) {
-                    alert("Aviso: No modo híbrido a atualização é salva localmente. Atualizaremos a API na próxima versão.");
-                    currentUser = JSON.parse(JSON.stringify(tempRegData));
-                    localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
-                    updateDriverInDB(currentUser);
+                    alert("Aviso: No modo híbrido a atualização de perfil está desativada.");
                     isUpdatingProfile = false;
                     openProfile(); 
                 } else {
-                    // MANDA PRO MYSQL!
                     try {
                         const response = await fetch(`${API_URL}?acao=cadastrar`, {
                             method: 'POST',
@@ -1427,12 +1486,16 @@
         }
 
         function logout() {
+            if(currentUser && currentUser.role === 'driver') {
+                currentUser.isOnline = false;
+                updateDriverInDB(currentUser); // Desconecta na nuvem
+            }
             localStorage.removeItem('motoAppCurrent');
             currentUser = null;
             navTo('screen-home');
         }
 
-        // --- ATUALIZAR STATUS NO BANCO (ONLINE/OFFLINE/RATING) ---
+        // --- ATUALIZA STATUS NO MYSQL ---
         async function updateDriverInDB(driverData) {
             try {
                 await fetch(`${API_URL}?acao=atualizar_status`, {
@@ -1441,11 +1504,11 @@
                     body: JSON.stringify(driverData)
                 });
             } catch (e) {
-                console.log("Aviso: Falha temporária ao sincronizar status na nuvem.");
+                console.log("Falha ao sincronizar status.");
             }
         }
 
-        // --- LISTAGEM DE MOTORISTAS VIA NUVEM ---
+        // --- LISTAGEM DE MOTORISTAS ---
         async function renderMotoList() {
             const listDiv = document.getElementById('moto-list');
             listDiv.innerHTML = '<p style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Buscando motoristas na região...</p>';
@@ -1521,7 +1584,6 @@
             }
         }
 
-        // --- SISTEMA DE VISUALIZAÇÃO DE PERFIL ---
         function openUserProfile(target) {
             let userToView = null;
             if(target === 'driver' && currentRideData && currentRideData.driver) {
@@ -1660,7 +1722,6 @@
             document.getElementById('no-rides-msg').style.display = 'none';
             document.getElementById('new-ride-alert').style.display = 'block';
             
-            // SIMULAÇÃO NUVEM: O motorista no banco já fica com status "Busy"
             if(currentUser.role === 'driver') {
                 currentUser.isBusy = true;
                 localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
@@ -1680,7 +1741,6 @@
             document.getElementById('new-ride-alert').style.display = 'none';
             document.getElementById('no-rides-msg').style.display = 'block';
             
-            // Libera o motorista no banco
             if(currentRideData && currentRideData.driver) {
                 currentRideData.driver.isBusy = false;
                 updateDriverInDB(currentRideData.driver);
@@ -1729,7 +1789,7 @@
         function acceptRide() {
             const inputVal = parseFloat(document.getElementById('driver-input-price').value);
             if (isNaN(inputVal) || inputVal <= 0) {
-                alert("Por favor, confirme ou digite o valor que será cobrado nesta corrida.");
+                alert("Por favor, confirme ou digite o valor que será cobrado.");
                 return;
             }
 
@@ -1772,7 +1832,6 @@
             startPassengerSyncTimer(); 
         }
 
-        // --- SISTEMA GPS ANIMADO ---
         function startPassengerSyncTimer() {
             clearInterval(passengerSyncTimer);
             passengerTimeLeft = 12; 
@@ -1851,21 +1910,23 @@
         }
 
         // --- SISTEMA DE AVALIAÇÃO E FINALIZAÇÃO ---
-        function finishRide() {
-            alert("Corrida finalizada com sucesso! A viagem foi salva no histórico.");
+        async function finishRide() {
+            alert("Corrida finalizada com sucesso! Salvando histórico na nuvem...");
             
-            rideHistoryDB.push({
-                date: new Date().toLocaleString('pt-BR'),
-                driver: currentRideData.driver.nome,
-                passenger: currentRideData.pass.nome,
-                driverEmail: currentRideData.driver.email,
-                passEmail: currentRideData.pass.email,
-                origin: currentRideData.origin + " (Formiga)",
-                dest: currentRideData.dest + " (Formiga)",
-                price: currentRideData.price.replace('.', ','),
-                dist: currentRideData.dist
-            });
-            localStorage.setItem('motoAppHistory', JSON.stringify(rideHistoryDB));
+            try {
+                await fetch(`${API_URL}?acao=salvar_corrida`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        driverEmail: currentRideData.driver.email, passEmail: currentRideData.pass.email,
+                        driverNome: currentRideData.driver.nome, passNome: currentRideData.pass.nome,
+                        origem: currentRideData.origin, destino: currentRideData.dest,
+                        distancia: currentRideData.dist, preco: currentRideData.price
+                    })
+                });
+            } catch (e) {
+                console.log("Erro ao salvar histórico.");
+            }
 
             if(currentUser.role === 'driver') {
                 currentUser.isBusy = false;
@@ -1918,11 +1979,8 @@
         async function submitRating() {
             let drv = currentRideData.driver;
             let oldR = parseFloat(drv.rating || 5);
-            
-            // Calcula a média das avaliações (Simples para salvar no BD)
             drv.rating = ((oldR + window.tempSelectedRating) / 2).toFixed(1);
             
-            // Envia para NUVEM
             await updateDriverInDB(drv);
 
             document.getElementById('modal-rating').style.display = 'none';
@@ -2018,11 +2076,9 @@
                     </div>
                 `;
             });
-
             chatBox.scrollTop = chatBox.scrollHeight;
         }
-
-        // --- FUNÇÕES DE PERFIL EXTRA ---
+        
         function openProfile() {
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
             document.getElementById('nav-profile').classList.add('active');
@@ -2108,7 +2164,7 @@
             window.tempConfigPriceType = type;
         }
 
-        function savePriceModal() {
+        async function savePriceModal() {
             const type = window.tempConfigPriceType || 'km';
             const valKm = parseFloat(document.getElementById('input-price-km').value);
             const valFixed = parseFloat(document.getElementById('input-price-fixed').value);
@@ -2121,7 +2177,7 @@
             if(!isNaN(valFixed)) currentUser.fixedPrice = valFixed;
             
             localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
-            updateDriverInDB(currentUser); // Atualiza na nuvem
+            await updateDriverInDB(currentUser); 
             syncDriverPriceUI();
             closePriceModal();
         }
@@ -2136,10 +2192,10 @@
             }
         }
 
-        function toggleDriverStatus() {
+        async function toggleDriverStatus() {
             currentUser.isOnline = !currentUser.isOnline;
             localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
-            updateDriverInDB(currentUser); // Atualiza na nuvem!
+            await updateDriverInDB(currentUser); 
             syncDriverUIStatus();
         }
 
