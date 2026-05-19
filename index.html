@@ -391,7 +391,7 @@
             animation: fadeIn 0.3s ease;
         }
 
-        /* === MAPAS E CARDS === */
+        /* === MAPAS E CARDS (GPS ANIMADO) === */
         .map-placeholder {
             width: 100%;
             height: 200px;
@@ -1199,6 +1199,9 @@
                     <button class="btn btn-outline" style="border-color: var(--danger); color: var(--danger); margin-top: 16px;" onclick="logout()">
                         <i class="fa-solid fa-right-from-bracket"></i> Sair da Conta
                     </button>
+                    <button class="btn btn-outline" style="margin-top: 12px; border: none; font-size: 0.8rem;" onclick="clearData()">
+                        <i class="fa-solid fa-trash"></i> Limpar Dados Salvos
+                    </button>
                 </div>
 
                 <div id="profile-edit-mode" style="display: none;">
@@ -1239,6 +1242,7 @@
     <script>
         // === BANCO DE DADOS LOCAL E ESTADOS ===
         let currentUser = JSON.parse(localStorage.getItem('motoAppCurrent')) || null;
+        
         let tempRegData = { role: 'passenger' };
         let currentRideData = { chat: [] };
         let rideStatusState = 0; 
@@ -1248,7 +1252,7 @@
         let passengerSyncTimer;
         let passengerTimeLeft = 12; 
 
-        // API URL DEFINITIVA
+        // API URL (Com link absoluto pro seu cPanel)
         const API_URL = 'https://financelypro.com.br/rodaja/api.php';
 
         function getAvatarUrl(name) {
@@ -1266,7 +1270,7 @@
 
                 if(currentUser.role === 'passenger') {
                     document.getElementById('user-name-display').innerText = currentUser.nome.split(' ')[0];
-                    renderMotoList(); 
+                    renderMotoList(); // CHAMA A NUVEM
                     navTo('screen-passenger');
                 } else {
                     syncDriverPriceUI();
@@ -1324,10 +1328,10 @@
             document.getElementById('nav-history').classList.add('active');
             
             const listDiv = document.getElementById('history-list');
-            listDiv.innerHTML = '<p style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando histórico...</p>';
+            listDiv.innerHTML = '<p style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando histórico da nuvem...</p>';
 
             try {
-                const response = await fetch(`${API_URL}?acao=listar_historico&email=${encodeURIComponent(currentUser.email)}`);
+                const response = await fetch(`${API_URL}?acao=listar_historico&email=${encodeURIComponent(currentUser.email)}&t=${Date.now()}`);
                 const resultado = await response.json();
 
                 if(resultado.sucesso) {
@@ -1352,7 +1356,7 @@
                             historyHTML += `
                                 <div class="history-month-badge">
                                     <span><i class="fa-regular fa-calendar-days"></i> Mês: ${monthYear}</span>
-                                    <span>Total Movimentado: R$ ${data.total.toFixed(2).replace('.', ',')}</span>
+                                    <span>Total: R$ ${data.total.toFixed(2).replace('.', ',')}</span>
                                 </div>
                             `;
 
@@ -1376,9 +1380,11 @@
                         }
                         listDiv.innerHTML = historyHTML;
                     }
+                } else {
+                    listDiv.innerHTML = `<p style="text-align:center; color: var(--danger);">${resultado.erro}</p>`;
                 }
             } catch (e) {
-                listDiv.innerHTML = `<p style="text-align:center; color: var(--danger);">Erro ao buscar histórico.</p>`;
+                listDiv.innerHTML = `<p style="text-align:center; color: var(--danger);">Erro de conexão com o Histórico.</p>`;
             }
             navTo('screen-history');
         }
@@ -1488,7 +1494,7 @@
         function logout() {
             if(currentUser && currentUser.role === 'driver') {
                 currentUser.isOnline = false;
-                updateDriverInDB(currentUser); // Desconecta na nuvem
+                updateDriverInDB(currentUser); 
             }
             localStorage.removeItem('motoAppCurrent');
             currentUser = null;
@@ -1508,13 +1514,14 @@
             }
         }
 
-        // --- LISTAGEM DE MOTORISTAS ---
+        // --- LISTAGEM DE MOTORISTAS VIA NUVEM (Com Cache Busting) ---
         async function renderMotoList() {
             const listDiv = document.getElementById('moto-list');
             listDiv.innerHTML = '<p style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Buscando motoristas na região...</p>';
 
             try {
-                const response = await fetch(`${API_URL}?acao=listar_motoristas`);
+                // O &t=Date.now() OBRIGA o navegador a não usar cache velho
+                const response = await fetch(`${API_URL}?acao=listar_motoristas&t=${Date.now()}`);
                 const resultado = await response.json();
 
                 if (resultado.sucesso) {
@@ -1578,9 +1585,11 @@
                             </div>
                         `;
                     });
+                } else {
+                    listDiv.innerHTML = `<p style="text-align:center; color: var(--danger);">${resultado.erro}</p>`;
                 }
             } catch (error) {
-                listDiv.innerHTML = `<p style="text-align:center; color: var(--danger);">Erro ao buscar dados na nuvem.</p>`;
+                listDiv.innerHTML = `<p style="text-align:center; color: var(--danger);">Erro de conexão. Tente novamente.</p>`;
             }
         }
 
@@ -1722,6 +1731,7 @@
             document.getElementById('no-rides-msg').style.display = 'none';
             document.getElementById('new-ride-alert').style.display = 'block';
             
+            // SIMULAÇÃO NUVEM
             if(currentUser.role === 'driver') {
                 currentUser.isBusy = true;
                 localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
@@ -1731,7 +1741,7 @@
                 updateDriverInDB(reqData.driver);
             }
 
-            alert(`Pedido enviado para ${reqData.driver.nome}. Trocando para a visão do motorista para definir valor e aceitar.`);
+            alert(`Pedido enviado para ${reqData.driver.nome}. Trocando para a visão do motorista.`);
             navTo('screen-driver'); 
         }
 
@@ -1789,7 +1799,7 @@
         function acceptRide() {
             const inputVal = parseFloat(document.getElementById('driver-input-price').value);
             if (isNaN(inputVal) || inputVal <= 0) {
-                alert("Por favor, confirme ou digite o valor que será cobrado.");
+                alert("Por favor, confirme ou digite o valor que será cobrado nesta corrida.");
                 return;
             }
 
@@ -1925,7 +1935,7 @@
                     })
                 });
             } catch (e) {
-                console.log("Erro ao salvar histórico.");
+                console.log("Erro ao salvar histórico na nuvem.");
             }
 
             if(currentUser.role === 'driver') {
@@ -2015,7 +2025,7 @@
             document.getElementById('gps-moto-driver').style.left = '10%';
         }
 
-        // --- SISTEMA DE CHAT DIFERENCIADO ---
+        // --- SISTEMA DE CHAT ---
         function openChat() {
             document.getElementById('modal-chat').style.display = 'flex';
             renderChat();
