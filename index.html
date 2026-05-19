@@ -1250,7 +1250,7 @@
         let passengerSyncTimer;
         let passengerTimeLeft = 12; 
 
-        // API URL 
+        // API URL (Substituído com sucesso!)
         const API_URL = 'https://financelypro.com.br/rodaja/api.php';
 
         function getAvatarUrl(name) {
@@ -1268,7 +1268,7 @@
 
                 if(currentUser.role === 'passenger') {
                     document.getElementById('user-name-display').innerText = currentUser.nome.split(' ')[0];
-                    renderMotoList();
+                    renderMotoList(); // AGORA CHAMA A API NA INICIALIZAÇÃO!
                     navTo('screen-passenger');
                 } else {
                     syncDriverPriceUI();
@@ -1355,22 +1355,43 @@
                 tempRegData.placa = document.getElementById('reg-plate').value;
             }
             
-            try {
-                const response = await fetch(`${API_URL}?acao=cadastrar`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(tempRegData)
-                });
-                const resultado = await response.json();
+            isUpdatingProfile = false;
+            navTo('screen-verify');
+        }
 
-                if (resultado.sucesso) {
-                    alert("Cadastro realizado! Por favor, faça o login.");
-                    switchAuthTab('login');
+        async function verifyEmail() {
+            const code = document.getElementById('verify-code').value;
+            if(code.length > 0) {
+                if(isUpdatingProfile) {
+                    alert("Aviso: No modo híbrido a atualização é salva localmente. Atualizaremos a API na próxima versão.");
+                    currentUser = JSON.parse(JSON.stringify(tempRegData));
+                    localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
+                    updateDriverInDB(currentUser);
+                    isUpdatingProfile = false;
+                    openProfile(); 
                 } else {
-                    alert(resultado.erro);
+                    // MANDA PRO MYSQL!
+                    try {
+                        const response = await fetch(`${API_URL}?acao=cadastrar`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(tempRegData)
+                        });
+                        const resultado = await response.json();
+
+                        if (resultado.sucesso) {
+                            alert("Cadastro realizado na nuvem! Faça login para entrar.");
+                            switchAuthTab('login');
+                            navTo('screen-auth');
+                        } else {
+                            alert(resultado.erro);
+                        }
+                    } catch (error) {
+                        alert("Erro ao conectar com o servidor da nuvem.");
+                    }
                 }
-            } catch (error) {
-                alert("Erro ao conectar com o servidor da nuvem.");
+            } else {
+                alert("Por favor, digite o código de verificação.");
             }
         }
 
@@ -1411,7 +1432,20 @@
             navTo('screen-home');
         }
 
-        // --- LISTAGEM DE MOTORISTAS VIA PHP (NUVEM) ---
+        // --- ATUALIZAR STATUS NO BANCO (ONLINE/OFFLINE/RATING) ---
+        async function updateDriverInDB(driverData) {
+            try {
+                await fetch(`${API_URL}?acao=atualizar_status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(driverData)
+                });
+            } catch (e) {
+                console.log("Aviso: Falha temporária ao sincronizar status na nuvem.");
+            }
+        }
+
+        // --- LISTAGEM DE MOTORISTAS VIA NUVEM ---
         async function renderMotoList() {
             const listDiv = document.getElementById('moto-list');
             listDiv.innerHTML = '<p style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Buscando motoristas na região...</p>';
@@ -1470,7 +1504,7 @@
                                         <h4>${moto.nome}</h4>
                                         <p><span class="status-dot ${statusClass}"></span> ${statusText}</p>
                                         <p>
-                                            <i class="fa-solid fa-star" style="color: var(--warning);"></i> ${moto.rating || "5.0"} &bull; 
+                                            <i class="fa-solid fa-star" style="color: var(--warning);"></i> ${parseFloat(moto.rating || 5).toFixed(1)} &bull; 
                                             ${priceDisplay}
                                         </p>
                                     </div>
@@ -1506,7 +1540,7 @@
                     document.getElementById('view-profile-driver-details').style.display = 'block';
                     document.getElementById('view-profile-moto').innerText = userToView.moto;
                     document.getElementById('view-profile-plate').innerText = userToView.placa || userToView.plate;
-                    document.getElementById('view-profile-rating').innerText = userToView.rating || "5.0";
+                    document.getElementById('view-profile-rating').innerText = parseFloat(userToView.rating || 5).toFixed(1);
                 } else {
                     document.getElementById('view-profile-role').innerText = "Passageiro";
                     document.getElementById('view-profile-driver-details').style.display = 'none';
@@ -1626,9 +1660,14 @@
             document.getElementById('no-rides-msg').style.display = 'none';
             document.getElementById('new-ride-alert').style.display = 'block';
             
+            // SIMULAÇÃO NUVEM: O motorista no banco já fica com status "Busy"
             if(currentUser.role === 'driver') {
                 currentUser.isBusy = true;
                 localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
+                updateDriverInDB(currentUser);
+            } else {
+                reqData.driver.isBusy = true;
+                updateDriverInDB(reqData.driver);
             }
 
             alert(`Pedido enviado para ${reqData.driver.nome}. Trocando para a visão do motorista para definir valor e aceitar.`);
@@ -1640,6 +1679,17 @@
             document.getElementById('passenger-search-panel').style.display = 'block';
             document.getElementById('new-ride-alert').style.display = 'none';
             document.getElementById('no-rides-msg').style.display = 'block';
+            
+            // Libera o motorista no banco
+            if(currentRideData && currentRideData.driver) {
+                currentRideData.driver.isBusy = false;
+                updateDriverInDB(currentRideData.driver);
+            }
+            if(currentUser.role === 'driver') {
+                currentUser.isBusy = false;
+                localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
+            }
+            
             currentRideData = { chat: [] };
             checkQueueAndProcessNext();
         }
@@ -1661,6 +1711,12 @@
             document.getElementById('new-ride-alert').style.display = 'none';
             document.getElementById('no-rides-msg').style.display = 'block';
             
+            if(currentUser.role === 'driver') {
+                currentUser.isBusy = false;
+                localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
+                updateDriverInDB(currentUser);
+            }
+
             document.getElementById('modal-analyzing').style.display = 'none';
             document.getElementById('passenger-active-ride').style.display = 'none';
             document.getElementById('passenger-search-panel').style.display = 'block';
@@ -1703,7 +1759,7 @@
             document.getElementById('active-driver-avatar').innerHTML = `<img src="${currentRideData.driver.avatar || getAvatarUrl(currentRideData.driver.nome)}">`;
             document.getElementById('active-driver-name').innerText = currentRideData.driver.nome;
             document.getElementById('active-driver-moto').innerText = currentRideData.driver.moto + " | " + currentRideData.driver.placa;
-            document.getElementById('active-driver-rating-display').innerText = currentRideData.driver.rating || "5.0";
+            document.getElementById('active-driver-rating-display').innerText = parseFloat(currentRideData.driver.rating || 5).toFixed(1);
             
             document.getElementById('btn-call-driver').href = `tel:${currentRideData.driver.telefone}`;
             document.getElementById('pass-active-origin').innerText = currentRideData.origin + ", Formiga - MG";
@@ -1814,6 +1870,10 @@
             if(currentUser.role === 'driver') {
                 currentUser.isBusy = false;
                 localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
+                updateDriverInDB(currentUser);
+            } else {
+                currentRideData.driver.isBusy = false; 
+                updateDriverInDB(currentRideData.driver);
             }
 
             if(currentUser.role === 'passenger') {
@@ -1855,7 +1915,16 @@
             });
         }
 
-        function submitRating() {
+        async function submitRating() {
+            let drv = currentRideData.driver;
+            let oldR = parseFloat(drv.rating || 5);
+            
+            // Calcula a média das avaliações (Simples para salvar no BD)
+            drv.rating = ((oldR + window.tempSelectedRating) / 2).toFixed(1);
+            
+            // Envia para NUVEM
+            await updateDriverInDB(drv);
+
             document.getElementById('modal-rating').style.display = 'none';
             alert("Avaliação registrada com sucesso!");
             resetRideUI();
@@ -1949,9 +2018,11 @@
                     </div>
                 `;
             });
+
             chatBox.scrollTop = chatBox.scrollHeight;
         }
-        
+
+        // --- FUNÇÕES DE PERFIL EXTRA ---
         function openProfile() {
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
             document.getElementById('nav-profile').classList.add('active');
@@ -1975,7 +2046,7 @@
                 document.getElementById('profile-price').innerText = `${typeText} R$ ${valText.replace('.', ',')}`;
                 
                 document.getElementById('profile-my-rating').style.display = 'block';
-                document.getElementById('profile-rating-value').innerText = currentUser.rating || "5.0";
+                document.getElementById('profile-rating-value').innerText = parseFloat(currentUser.rating || 5).toFixed(1);
             } else {
                 document.getElementById('profile-role-badge').innerText = "Passageiro";
                 document.getElementById('profile-driver-details').style.display = 'none';
@@ -2008,7 +2079,7 @@
 
         function handleProfileUpdate(event) {
             event.preventDefault();
-            alert("A atualização de perfil está desativada no modo híbrido para não sobrepor o banco MySQL.");
+            alert("Em modo Nuvem, atualizações de perfil devem ser enviadas à API no futuro. O fluxo permanece seguro.");
             cancelProfileEdit();
         }
 
@@ -2050,6 +2121,7 @@
             if(!isNaN(valFixed)) currentUser.fixedPrice = valFixed;
             
             localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
+            updateDriverInDB(currentUser); // Atualiza na nuvem
             syncDriverPriceUI();
             closePriceModal();
         }
@@ -2067,6 +2139,7 @@
         function toggleDriverStatus() {
             currentUser.isOnline = !currentUser.isOnline;
             localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
+            updateDriverInDB(currentUser); // Atualiza na nuvem!
             syncDriverUIStatus();
         }
 
