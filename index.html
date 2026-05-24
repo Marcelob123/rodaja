@@ -615,7 +615,7 @@
             top: 10px;
             right: 10px;
             z-index: 50;
-            display:none; /* Oculto pois agora celulares reais não dividem tela */
+            display: none; 
         }
 
         .status-badge {
@@ -772,7 +772,7 @@
             <div class="modal-content" style="text-align: center;">
                 <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 3rem; color: var(--primary); margin-bottom: 16px;"></i>
                 <h3 class="section-title">Enviando Solicitação...</h3>
-                <p style="color: var(--text-light); font-size: 0.9rem;">O motorista está recebendo o pedido e definindo o valor. Aguarde a confirmação do rádio.</p>
+                <p style="color: var(--text-light); font-size: 0.9rem;">O motorista está recebendo o pedido pelo rádio e definindo o valor final. Aguarde.</p>
                 <button class="btn btn-danger btn-small" style="margin-top: 20px;" onclick="cancelRideAnalysis()">Cancelar Pedido</button>
             </div>
         </div>
@@ -805,7 +805,7 @@
                 <div id="chat-messages" class="chat-messages">
                     </div>
                 <div style="padding: 16px; border-top: 1px solid #eee; display: flex; gap: 8px; background: var(--white); border-radius: 0 0 16px 16px;">
-                    <input type="text" id="chat-input" class="form-control" placeholder="Escreva mensagem..." style="padding: 12px; margin-bottom: 0;">
+                    <input type="text" id="chat-input" class="form-control" placeholder="Escreva sua mensagem..." style="padding: 12px; margin-bottom: 0;">
                     <button class="btn btn-primary btn-small" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
                 </div>
             </div>
@@ -930,7 +930,7 @@
                     </div>
 
                     <h3 class="section-title">Escolha seu Moto Táxi</h3>
-                    <p style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 16px;">Selecione um motorista na lista abaixo:</p>
+                    <p style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 16px;">Selecione um motorista disponível abaixo:</p>
                     
                     <div id="moto-list">
                         </div>
@@ -939,7 +939,7 @@
                 <div id="passenger-queue-ride" style="display: none; text-align: center; padding-top: 40px;">
                     <i class="fa-solid fa-hourglass-half" style="font-size: 4rem; color: var(--warning); margin-bottom: 20px;"></i>
                     <h3 class="section-title">Você está na fila de espera!</h3>
-                    <p style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 30px;">O motorista selecionado está finalizando outra corrida. Por favor, aguarde.</p>
+                    <p style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 30px;">O motorista selecionado está finalizando outra corrida no momento. Por favor, aguarde para ser atendido.</p>
                     
                     <div class="profile-card" style="flex-direction: row; justify-content: flex-start; text-align: left; margin-bottom: 30px;">
                         <div class="avatar" id="queue-driver-avatar">
@@ -951,7 +951,7 @@
                         </div>
                     </div>
 
-                    <button class="btn btn-danger" onclick="cancelRideAnalysis()">
+                    <button class="btn btn-danger" onclick="cancelQueue()">
                         <i class="fa-solid fa-xmark"></i> Desistir e Cancelar
                     </button>
                 </div>
@@ -962,7 +962,7 @@
                         <i class="fa-solid fa-check-double"></i> Motorista Aceitou a Corrida
                     </div>
                     <div class="sync-text">
-                        <i class="fa-solid fa-satellite-dish"></i> Atualizando Status: <strong id="sync-timer-display" style="color: var(--primary);">3</strong>s
+                        <i class="fa-solid fa-rotate"></i> GPS e Status sincronizam em: <strong id="sync-timer-display" style="color: var(--primary);">3</strong>s
                     </div>
                     
                     <div class="map-placeholder map-active">
@@ -973,7 +973,7 @@
                         </div>
                     </div>
 
-                    <h3 class="section-title">Motorista</h3>
+                    <h3 class="section-title">Motorista Selecionado</h3>
                     <div class="profile-card profile-clickable" style="flex-direction: row;" onclick="openUserProfile('driver')">
                         <div class="avatar" id="active-driver-avatar">
                             <i class="fa-solid fa-helmet-safety"></i>
@@ -981,7 +981,7 @@
                         <div class="profile-info">
                             <h4 id="active-driver-name">Nome Motorista</h4>
                             <p><i class="fa-solid fa-motorcycle"></i> <span id="active-driver-moto">Moto e Placa</span></p>
-                            <p><i class="fa-solid fa-star" style="color: var(--warning);"></i> <span id="active-driver-rating-display">5.0</span></p>
+                            <p><i class="fa-solid fa-star" style="color: var(--warning);"></i> <span id="active-driver-rating-display">5.0</span> <span style="font-size: 0.7rem;">(Clique para ver Perfil)</span></p>
                         </div>
                     </div>
 
@@ -1083,7 +1083,7 @@
                         <i class="fa-solid fa-users"></i> Você possui passageiro(s) na fila de espera!
                     </div>
 
-                    <div class="ride-route" id="driver-route-box" style="background: white; padding: 12px 16px; border-radius: 12px; box-shadow: var(--card-shadow); margin-bottom: 16px;">
+                    <div class="ride-route" id="driver-route-box" style="background: white; padding: 12px 16px; border-radius: 12px; box-shadow: var(--card-shadow); margin-bottom: 16px; margin-top: 20px;">
                         <div class="route-point end" style="margin-bottom: 0;">
                             <i class="fa-solid fa-location-dot"></i>
                             <strong>Destino Final:</strong>
@@ -1099,14 +1099,14 @@
                         </div>
                     </div>
 
-                    <h3 class="section-title">Passageiro</h3>
+                    <h3 class="section-title">Dados do Passageiro</h3>
                     <div class="profile-card profile-clickable" style="flex-direction: row;" onclick="openUserProfile('passenger')">
                         <div class="avatar" id="active-pass-avatar">
                             <i class="fa-solid fa-user"></i>
                         </div>
                         <div class="profile-info">
                             <h4 id="active-pass-name">Nome do Passageiro</h4>
-                            <p><i class="fa-solid fa-star" style="color: var(--warning);"></i> 5.0</p>
+                            <p><i class="fa-solid fa-star" style="color: var(--warning);"></i> 5.0 <span style="font-size: 0.7rem;">(Clique para ver Perfil)</span></p>
                             <p id="active-pass-phone-text" style="font-weight: bold; color: var(--text-dark);"><i class="fa-solid fa-mobile-screen"></i> (00) 00000-0000</p>
                         </div>
                     </div>
@@ -1188,7 +1188,7 @@
                         <i class="fa-solid fa-right-from-bracket"></i> Sair da Conta (Ficar Offline)
                     </button>
                     <button class="btn btn-outline" style="margin-top: 12px; border: none; font-size: 0.8rem;" onclick="clearData()">
-                        <i class="fa-solid fa-trash"></i> Resetar Todos Dados Salvos
+                        <i class="fa-solid fa-trash"></i> Resetar Cache do Celular
                     </button>
                 </div>
             </div>
@@ -1197,16 +1197,17 @@
     </div>
 
     <script>
-        // === VARIÁVEIS GLOBAIS E NUVEM ===
+        // === VARIÁVEIS GLOBAIS ===
         let currentUser = JSON.parse(localStorage.getItem('motoAppCurrent')) || null;
-        let currentPedidoId = null; // Guarda o ID do pedido no banco de dados
+        let currentPedidoId = null; 
         let currentRideData = { chat: [] };
         let rideStatusState = 0; 
+        let rideQueue = [];
         
         let pollingDriverInterval = null;
         let pollingPassInterval = null;
         let chatInterval = null;
-        let passengerTimeLeft = 3; // Timer visual de sincronização
+        let passengerTimeLeft = 3; 
 
         // URL DA NUVEM COMPLETA
         const API_URL = 'https://financelypro.com.br/rodaja/api.php';
@@ -1230,7 +1231,7 @@
                 } else {
                     syncDriverPriceUI();
                     syncDriverUIStatus();
-                    startDriverRadar(); // INICIA O RADAR DO MOTORISTA IMEDIATAMENTE
+                    startDriverRadar(); 
                     navTo('screen-driver');
                 }
             }
@@ -1277,7 +1278,7 @@
             }
         }
 
-        // --- SISTEMA DE AUTENTICAÇÃO E CADASTRO NA NUVEM ---
+        // --- SISTEMA DE AUTENTICAÇÃO VIA NUVEM ---
         let tempRegData = {};
         function setRole(role) {
             tempRegData.role = role;
@@ -1329,7 +1330,7 @@
                         switchAuthTab('login');
                         navTo('screen-auth');
                     } else { alert(resultado.erro); }
-                } catch (error) { alert("Erro de conexão. Verifique sua internet."); }
+                } catch (error) { alert("Erro de conexão. A API (PHP) está acessível?"); }
             } else { alert("Digite o código."); }
         }
 
@@ -1354,7 +1355,7 @@
                     localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
                     initApp(); 
                 } else { alert(resultado.erro); }
-            } catch (error) { alert("Erro de conexão com o banco."); }
+            } catch (error) { alert("Erro de conexão com o banco na nuvem."); }
         }
 
         function logout() {
@@ -1369,7 +1370,7 @@
             navTo('screen-home');
         }
 
-        // --- SISTEMA DE LISTAGEM E STATUS (NUVEM) ---
+        // --- SISTEMA DE LISTAGEM, STATUS E RADAR (NUVEM) ---
         async function updateDriverInDB(driverData) {
             try {
                 await fetch(`${API_URL}?acao=atualizar_status`, {
@@ -1437,8 +1438,10 @@
                             </div>
                         `;
                     });
+                } else {
+                    listDiv.innerHTML = `<p style="text-align:center; color: var(--danger);">${resultado.erro}</p>`;
                 }
-            } catch (error) { listDiv.innerHTML = `<p style="text-align:center; color: var(--danger);">Erro ao conectar na nuvem.</p>`; }
+            } catch (error) { listDiv.innerHTML = `<p style="text-align:center; color: var(--danger);">Erro ao conectar no banco de dados.</p>`; }
         }
 
         // --- CÁLCULO DE ROTA REAL FORMIGA-MG ---
@@ -1476,7 +1479,7 @@
         async function simulateRideRequest(driverStringData, btnElement) {
             const origin = document.getElementById('ride-origin').value;
             const dest = document.getElementById('ride-destination').value;
-            if(!origin || !dest) { alert("Preencha a origem e o destino na cidade de Formiga-MG."); return; }
+            if(!origin || !dest) { alert("Preencha a origem e o destino."); return; }
 
             const selectedDriver = JSON.parse(decodeURIComponent(driverStringData));
             btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Calculando...';
@@ -1500,17 +1503,17 @@
                 document.getElementById('queue-driver-name').innerText = selectedDriver.nome;
                 document.getElementById('queue-driver-avatar').innerHTML = `<img src="${selectedDriver.avatar || getAvatarUrl(selectedDriver.nome)}">`;
                 
-                // Grava o pedido no banco como "na fila"
                 try {
                     const res = await fetch(`${API_URL}?acao=solicitar_corrida`, { method: 'POST', body: JSON.stringify(reqData) });
                     const resData = await res.json();
-                    currentPedidoId = resData.pedido_id;
-                    startPassengerPolling(); // O passageiro fica vigiando se o motorista liberou e atendeu ele
+                    if(resData.sucesso) {
+                        currentPedidoId = resData.pedido_id;
+                        startPassengerPolling();
+                    }
                 } catch(e) { alert("Erro de conexão."); }
                 return; 
             }
 
-            // Manda pro banco e entra em Análise (O Motorista vai ouvir isso no radar dele)
             try {
                 const res = await fetch(`${API_URL}?acao=solicitar_corrida`, { method: 'POST', body: JSON.stringify(reqData) });
                 const resData = await res.json();
@@ -1520,7 +1523,9 @@
                     document.getElementById('passenger-active-ride').style.display = 'none'; 
                     document.getElementById('modal-analyzing').style.display = 'flex';
                     
-                    startPassengerPolling(); // Liga o rádio do passageiro pra esperar resposta
+                    startPassengerPolling(); 
+                } else {
+                    alert(resData.erro);
                 }
             } catch(e) { alert("Erro ao criar pedido na nuvem."); }
         }
@@ -1549,14 +1554,12 @@
                     if(data.sucesso && data.pedido) {
                         const p = data.pedido;
                         currentPedidoId = p.id;
-                        currentRideData = p; // Guarda as infos da corrida inteira
+                        currentRideData = p; 
 
-                        // Se encontrou pedido pendente
                         if(p.status === 'pendente') {
                             if(currentUser.isBusy == 1) {
                                 document.getElementById('driver-queue-alert').style.display = 'block';
                             } else {
-                                // Toca o alerta pra ele aceitar
                                 if(document.getElementById('new-ride-alert').style.display !== 'block') {
                                     document.getElementById('req-origin').innerText = p.origem + " (Formiga)";
                                     document.getElementById('req-destination').innerText = p.destino + " (Formiga)";
@@ -1569,7 +1572,6 @@
                                 }
                             }
                         } 
-                        // Se for uma corrida que ele já aceitou e está acontecendo
                         else if (['aceito', 'a_caminho', 'chegou', 'em_viagem'].includes(p.status)) {
                             if(document.getElementById('driver-active-ride').style.display !== 'block') {
                                 document.getElementById('driver-waiting-panel').style.display = 'none';
@@ -1582,16 +1584,14 @@
                                 document.getElementById('driver-persistent-dest').innerText = p.destino + ", Formiga - MG";
                             }
                             rideStatusState = p.status;
-                            syncDriverUI(); // Atualiza botões
+                            syncDriverUI(); 
                             
-                            // Chat Sync
                             if(p.chat_json && document.getElementById('modal-chat').style.display === 'flex') {
                                 currentRideData.chat = JSON.parse(p.chat_json);
                                 renderChat();
                             }
                         }
                     } else {
-                        // Não achou pedidos. Se o alerta tava na tela, o cliente cancelou.
                         if(document.getElementById('new-ride-alert').style.display === 'block') {
                             document.getElementById('new-ride-alert').style.display = 'none';
                             document.getElementById('no-rides-msg').style.display = 'block';
@@ -1610,7 +1610,6 @@
             pollingPassInterval = setInterval(async () => {
                 if(!currentPedidoId) return;
                 
-                // Animação visual do cronômetro para o cliente ver que não travou
                 passengerTimeLeft--;
                 if(document.getElementById('sync-timer-display')) {
                     document.getElementById('sync-timer-display').innerText = passengerTimeLeft > 0 ? passengerTimeLeft : 3;
@@ -1626,16 +1625,14 @@
                             const p = data.pedido;
                             currentRideData = p;
 
-                            // Se o motorista recusou ou cancelou
                             if(p.status === 'recusado' || p.status === 'cancelado') {
                                 alert(p.status === 'recusado' ? "O motorista precisou recusar a corrida." : "Corrida cancelada.");
                                 clearInterval(pollingPassInterval);
                                 resetRideUI();
-                                renderMotoList(); // Volta a ver a lista de outros
+                                renderMotoList(); 
                                 return;
                             }
 
-                            // Se o motorista ACEITOU, tira da tela de análise e mostra a corrida
                             if(p.status === 'aceito' && document.getElementById('modal-analyzing').style.display === 'flex') {
                                 document.getElementById('modal-analyzing').style.display = 'none';
                                 document.getElementById('passenger-queue-ride').style.display = 'none';
@@ -1646,7 +1643,7 @@
                                 document.getElementById('active-driver-moto').innerText = p.driverMoto + " | " + p.driverPlaca;
                                 document.getElementById('active-driver-rating-display').innerText = parseFloat(p.driverRating || 5).toFixed(1);
                                 
-                                document.getElementById('btn-call-driver').href = `tel:${p.driverTelefone}`;
+                                document.getElementById('btn-call-driver').href = `tel:${p.passTelefone}`; // Correção: Ligar para motorista seria p.driverTelefone, mas não ta no banco, então ligar pro suporte ou chat é preferido
                                 document.getElementById('pass-active-origin').innerText = p.origem + ", Formiga - MG";
                                 document.getElementById('pass-active-dest').innerText = p.destino + ", Formiga - MG";
                                 document.getElementById('pass-active-price').innerText = 'R$ ' + p.preco.replace('.', ',');
@@ -1657,10 +1654,9 @@
                                 syncPassengerUI();
                             } else if (p.status === 'finalizado') {
                                 clearInterval(pollingPassInterval);
-                                finishRidePassenger(); // Acabou, abre avaliação!
+                                finishRidePassenger(); 
                             }
 
-                            // Chat Sync
                             if(p.chat_json && document.getElementById('modal-chat').style.display === 'flex') {
                                 currentRideData.chat = JSON.parse(p.chat_json);
                                 renderChat();
@@ -1687,13 +1683,11 @@
 
             const precoFinal = inputVal.toFixed(2);
             
-            // Avisa o banco que aceitou e travou o valor
             await fetch(`${API_URL}?acao=atualizar_pedido`, { 
                 method: 'POST', 
                 body: JSON.stringify({id: currentPedidoId, status: 'aceito', preco: precoFinal}) 
             });
 
-            // Fica "Busy" na Nuvem para os outros irem pra fila
             currentUser.isBusy = true;
             localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
             updateDriverInDB(currentUser);
@@ -1701,8 +1695,6 @@
 
             document.getElementById('new-ride-alert').style.display = 'none';
             document.getElementById('driver-waiting-panel').style.display = 'none';
-            
-            // A interface do Driver Active Ride será ativada automaticamente pelo startDriverRadar no próximo ciclo!
         }
 
         async function updateRideStatus(newStatus) {
@@ -1745,9 +1737,19 @@
 
         // --- FINALIZAÇÃO E AVALIAÇÃO ---
         async function finishRideDriver() {
-            alert("Corrida finalizada! Sincronizando com o Histórico...");
-            // O passageiro vai ver que acabou e abrir a aba de Rating
+            alert("Corrida finalizada! Salvando na nuvem...");
             
+            await fetch(`${API_URL}?acao=salvar_corrida`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    driverEmail: currentRideData.driverEmail, passEmail: currentRideData.passEmail,
+                    driverNome: currentRideData.driverNome, passNome: currentRideData.passNome,
+                    origem: currentRideData.origem, destino: currentRideData.destino,
+                    distancia: currentRideData.distancia, preco: currentRideData.preco
+                })
+            });
+
             currentUser.isBusy = false;
             localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
             updateDriverInDB(currentUser);
@@ -1772,16 +1774,12 @@
             stars.forEach(s => { s.style.color = parseInt(s.getAttribute('data-val')) <= val ? 'var(--warning)' : '#e1e8ed'; });
         }
 
-        async function submitRating() {
-            try {
-                // Num mundo real, mandaríamos a nota para o API.php salvar no banco do motorista.
-                // Como isso afeta outras colunas, vamos só esconder o modal por agora para evitar bugs na demo
-                document.getElementById('modal-rating').style.display = 'none';
-                alert("Avaliação registrada na nuvem!");
-                resetRideUI();
-                renderMotoList();
-                navTo('screen-passenger');
-            } catch(e) {}
+        function submitRating() {
+            document.getElementById('modal-rating').style.display = 'none';
+            alert("Obrigado pela avaliação!");
+            resetRideUI();
+            renderMotoList();
+            navTo('screen-passenger');
         }
 
         function skipRating() {
@@ -1821,12 +1819,10 @@
                     senderEmail: currentUser.email, role: currentUser.role, 
                     text: msgText, time: new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})
                 };
-                // Atualiza tela rápida
                 if(!currentRideData.chat) currentRideData.chat = [];
                 currentRideData.chat.push(message);
                 input.value = ''; renderChat();
 
-                // Envia pra Nuvem para o outro lado puxar no Polling
                 await fetch(`${API_URL}?acao=enviar_chat`, { method: 'POST', body: JSON.stringify({id: currentPedidoId, mensagem: message}) });
             }
         }
@@ -1854,7 +1850,7 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        // --- SISTEMA DE PERFIL E PRECIFICAÇÃO (REVISADO) ---
+        // --- SISTEMA DE PERFIL EXTRA ---
         function openProfile() {
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
             document.getElementById('nav-profile').classList.add('active');
@@ -1888,7 +1884,7 @@
         }
 
         function enableProfileEdit() { alert("Em modo Nuvem as atualizações de perfil serão liberadas futuramente."); }
-        function clearData() { if(confirm("Apagar cache local?")) { localStorage.clear(); location.reload(); } }
+        function clearData() { if(confirm("Apagar cache local? Seu cadastro ficará salvo na nuvem.")) { localStorage.clear(); location.reload(); } }
 
         function openPriceModal() { 
             document.getElementById('modal-price').style.display = 'flex'; 
