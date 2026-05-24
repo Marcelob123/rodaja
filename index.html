@@ -1,101 +1,142 @@
-// Aumentado para 10 segundos
-function startDriverRadar() {
-    clearInterval(pollingDriverInterval);
-    pollingDriverInterval = setInterval(async () => {
-        if(!currentUser || currentUser.role !== 'driver' || !currentUser.isOnline) return;
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rodajá - Mobilidade Inteligente</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* === VARIÁVEIS E RESET === */
+        :root {
+            --primary: #00C853; --primary-dark: #009624; --bg-color: #f4f7f6;
+            --text-dark: #2c3e50; --text-light: #7f8c8d; --white: #ffffff;
+            --danger: #e74c3c; --warning: #f1c40f; --info: #3498db;
+            --card-shadow: 0 8px 24px rgba(0,0,0,0.08); --border-radius: 16px;
+        }
 
-        try {
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: #e0e5ec; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .app-container { width: 100%; max-width: 414px; height: 100vh; max-height: 896px; background-color: var(--bg-color); position: relative; overflow: hidden; box-shadow: 0 0 40px rgba(0,0,0,0.2); display: flex; flex-direction: column; }
+        @media (max-width: 480px) { .app-container { height: 100vh; max-height: none; box-shadow: none; } }
+
+        /* === COMPONENTES GERAIS === */
+        .screen { display: none; width: 100%; height: 100%; flex-direction: column; overflow-y: auto; background-color: var(--bg-color); animation: fadeIn 0.3s ease-in-out; padding-bottom: 70px; }
+        .screen.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .header { background: var(--white); padding: 20px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .content { padding: 24px; flex: 1; position: relative; }
+        .btn { width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .btn-primary { background: var(--primary); color: var(--white); box-shadow: 0 4px 15px rgba(0, 200, 83, 0.3); }
+        .btn-primary:disabled { background: #95a5a6; }
+        .btn-outline { background: transparent; color: var(--primary); border: 2px solid var(--primary); }
+        .btn-danger { background: var(--danger); color: var(--white); }
+        .input-group { margin-bottom: 20px; position: relative; }
+        .form-control { width: 100%; padding: 16px 16px 16px 48px; border: 1px solid #e1e8ed; border-radius: 12px; font-size: 1rem; background: var(--white); }
+        .modal-overlay { display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; padding: 20px; }
+        .modal-content { background: var(--white); width: 100%; border-radius: 16px; padding: 24px; }
+        .bottom-nav { position: absolute; bottom: 0; left: 0; width: 100%; height: 70px; background: var(--white); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-around; align-items: center; z-index: 50; display: none; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-light); font-size: 0.75rem; cursor: pointer; }
+        .nav-item.active { color: var(--primary); }
+        .avatar { width: 60px; height: 60px; background: var(--bg-color); border-radius: 50%; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-card { background: var(--white); border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: var(--card-shadow); display: flex; flex-direction: column; gap: 8px; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+        .status-online { background-color: var(--primary); }
+        .status-busy { background-color: var(--warning); }
+        .status-offline { background-color: var(--text-light); }
+        .sync-text { text-align: center; font-size: 0.75rem; color: var(--text-light); margin-bottom: 16px; }
+        .status-badge { background: var(--bg-color); color: var(--primary); padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; text-align: center; border: 1px solid var(--primary); }
+    </style>
+</head>
+<body onload="initApp()">
+
+<div class="app-container">
+    <div id="main-bottom-nav" class="bottom-nav">
+        <div class="nav-item active" onclick="openDashboard()"><i class="fa-solid fa-map-location-dot"></i> <span>Corridas</span></div>
+        <div class="nav-item" onclick="openHistory()"><i class="fa-solid fa-clock-rotate-left"></i> <span>Histórico</span></div>
+        <div class="nav-item" onclick="openProfile()"><i class="fa-solid fa-user"></i> <span>Perfil</span></div>
+    </div>
+
+    <div id="screen-passenger" class="screen active">
+        <div class="header"><h2>Olá, <span id="user-name-display">Passageiro</span></h2></div>
+        <div class="content">
+            <div id="passenger-search-panel">
+                <div class="input-group"><input type="text" class="form-control" id="ride-origin" placeholder="Origem"></div>
+                <div class="input-group"><input type="text" class="form-control" id="ride-destination" placeholder="Destino"></div>
+                <button class="btn btn-primary" onclick="requestRide()">Buscar Motorista</button>
+                <div id="moto-list" style="margin-top:20px;"></div>
+            </div>
+            <div id="passenger-active-ride" style="display:none;">
+                <div id="pass-status-badge" class="status-badge">Aguardando...</div>
+                <div class="sync-text">Atualizando em: <strong id="sync-timer">10</strong>s</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-driver" class="screen">
+        <div class="header"><h2>Área do Motorista</h2></div>
+        <div class="content">
+            <div id="driver-waiting-panel">
+                <button class="btn btn-primary" id="toggle-status" onclick="toggleStatus()">Ficar Online</button>
+                <div id="no-rides-msg" style="margin-top: 20px;">Aguardando...</div>
+                <div id="new-ride-alert" style="display:none; background:white; padding:20px; border-radius:16px;">
+                    <p>Novo Pedido!</p>
+                    <input type="number" id="driver-input-price" class="form-control" placeholder="Valor (R$)">
+                    <button class="btn btn-primary" onclick="acceptRide()">Aceitar</button>
+                </div>
+            </div>
+            <div id="driver-active-ride" style="display:none;">
+                <p>Em corrida!</p>
+                <button class="btn btn-danger" onclick="updateStatus('finalizado')">Finalizar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentUser = JSON.parse(localStorage.getItem('motoAppCurrent'));
+    const API_URL = 'https://financelypro.com.br/rodaja/api.php';
+    let currentPedidoId = null;
+
+    function initApp() {
+        if(currentUser) {
+            document.getElementById('main-bottom-nav').style.display = 'flex';
+            if(currentUser.role === 'passenger') navTo('screen-passenger');
+            else { navTo('screen-driver'); startDriverRadar(); }
+        }
+    }
+
+    // Radar do Motorista (10 segundos)
+    function startDriverRadar() {
+        setInterval(async () => {
+            if(currentUser.role !== 'driver' || !currentUser.isOnline) return;
             const res = await fetch(`${API_URL}?acao=checar_radar_motorista&email=${encodeURIComponent(currentUser.email)}&t=${Date.now()}`);
             const data = await res.json();
-            
-            if(data.sucesso && data.pedido) {
-                const p = data.pedido;
-                // VERIFICAÇÃO ANTI-BUG: Se o status for cancelado, limpa a tela do motorista
-                if(p.status === 'cancelado') {
-                    resetRideUI();
-                    return;
-                }
-                
-                currentPedidoId = p.id;
-                currentRideData = p; 
-
-                if(p.status === 'pendente') {
-                    if(currentUser.isBusy == 1) {
-                        document.getElementById('driver-queue-alert').style.display = 'block';
-                    } else {
-                        if(document.getElementById('new-ride-alert').style.display !== 'block') {
-                            document.getElementById('req-origin').innerText = p.origem + " (Formiga)";
-                            document.getElementById('req-destination').innerText = p.destino + " (Formiga)";
-                            document.getElementById('req-distance').innerText = p.distancia + ' km';
-                            document.getElementById('req-suggested-price').innerText = 'R$ ' + p.preco.replace('.', ',');
-                            document.getElementById('driver-input-price').value = p.preco; 
-                            document.getElementById('no-rides-msg').style.display = 'none';
-                            document.getElementById('new-ride-alert').style.display = 'block';
-                        }
-                    }
-                } 
-                else if (['aceito', 'a_caminho', 'chegou', 'em_viagem'].includes(p.status)) {
-                    if(document.getElementById('driver-active-ride').style.display !== 'block') {
-                        document.getElementById('driver-waiting-panel').style.display = 'none';
-                        document.getElementById('driver-active-ride').style.display = 'block';
-                        
-                        document.getElementById('active-pass-avatar').innerHTML = `<img src="${p.passAvatar || getAvatarUrl(p.passNome)}">`;
-                        document.getElementById('active-pass-name').innerText = p.passNome;
-                        document.getElementById('active-pass-phone-text').innerHTML = `<i class="fa-solid fa-mobile-screen"></i> ${p.passTelefone || 'Sem Telefone'}`;
-                        document.getElementById('btn-call-passenger').href = `tel:${p.passTelefone}`;
-                        document.getElementById('driver-persistent-dest').innerText = p.destino + ", Formiga - MG";
-                    }
-                    rideStatusState = p.status;
-                    syncDriverUI(); 
-                }
-            } else {
-                if(document.getElementById('new-ride-alert').style.display === 'block') {
-                    document.getElementById('new-ride-alert').style.display = 'none';
-                    document.getElementById('no-rides-msg').style.display = 'block';
-                }
-                document.getElementById('driver-queue-alert').style.display = 'none';
+            if(data.pedido && data.pedido.status === 'pendente') {
+                currentPedidoId = data.pedido.id;
+                document.getElementById('new-ride-alert').style.display = 'block';
+                document.getElementById('req-origin').innerText = data.pedido.origem;
             }
-        } catch(e) {}
-    }, 10000); // 10 segundos
-}
+        }, 10000);
+    }
 
-// Passageiro Polling também em 10 segundos
-function startPassengerPolling() {
-    clearInterval(pollingPassInterval);
-    pollingPassInterval = setInterval(async () => {
-        if(!currentPedidoId) return;
-        try {
-            const res = await fetch(`${API_URL}?acao=checar_status_pedido&id=${currentPedidoId}&t=${Date.now()}`);
-            const data = await res.json();
-            
-            if(data.sucesso && data.pedido) {
-                const p = data.pedido;
-                // Se o passageiro cancelou no banco, o motorista para de responder, pass fecha a tela
-                if(p.status === 'cancelado') {
-                    alert("Corrida cancelada.");
-                    resetRideUI();
-                    return;
-                }
-                
-                // Se o motorista aceitou, muda a tela do passageiro pra corrida
-                if(p.status === 'aceito' && document.getElementById('modal-analyzing').style.display === 'flex') {
-                    document.getElementById('modal-analyzing').style.display = 'none';
-                    document.getElementById('passenger-queue-ride').style.display = 'none';
-                    document.getElementById('passenger-active-ride').style.display = 'block';
-                    
-                    document.getElementById('active-driver-avatar').innerHTML = `<img src="${p.driverAvatar || getAvatarUrl(p.driverNome)}">`;
-                    document.getElementById('active-driver-name').innerText = p.driverNome;
-                    document.getElementById('active-driver-moto').innerText = p.driverMoto + " | " + p.driverPlaca;
-                    document.getElementById('active-driver-rating-display').innerText = parseFloat(p.driverRating || 5).toFixed(1);
-                    document.getElementById('pass-active-price').innerText = 'R$ ' + p.preco.replace('.', ',');
-                }
-                
-                // Atualiza status e gps
-                if(['aceito', 'a_caminho', 'chegou', 'em_viagem'].includes(p.status)) {
-                    rideStatusState = p.status;
-                    syncPassengerUI();
-                }
-            }
-        } catch(e) {}
-    }, 10000); // 10 segundos
-}
+    async function acceptRide() {
+        const preco = document.getElementById('driver-input-price').value;
+        await fetch(`${API_URL}?acao=atualizar_pedido`, {
+            method: 'POST',
+            body: JSON.stringify({id: currentPedidoId, status: 'aceito', preco: preco})
+        });
+        document.getElementById('driver-waiting-panel').style.display = 'none';
+        document.getElementById('driver-active-ride').style.display = 'block';
+    }
+
+    // Placeholder de navegação
+    function navTo(id) {
+        document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+        document.getElementById(id).style.display = 'flex';
+    }
+</script>
+</body>
+</html>
