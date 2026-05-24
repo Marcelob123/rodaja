@@ -1218,8 +1218,35 @@
 
         // SISTEMA DE AUTO-HEALING (Se a memória tiver os dados antigos, ele limpa e não trava)
         function initApp() {
+            // MODO DEMO AUTOMÁTICO - cria usuário se não existir
+            if(!currentUser) {
+                // Detecta se é aba de motorista pelo hash
+                const isDriver = window.location.hash === '#driver' || confirm("Abrir como MOTORISTA? (OK=Motorista, Cancelar=Passageiro)");
+                if(isDriver) {
+                    currentUser = {
+                        nome: "MARCELO CAETANO NASCIMENTO",
+                        email: "marcelo@rodaja.com",
+                        telefone: "(37) 99999-0000",
+                        role: "driver",
+                        priceKm: 2.5,
+                        priceType: "km",
+                        fixedPrice: 10,
+                        isOnline: true,
+                        avatar: "https://ui-avatars.com/api/?name=MARCELO&background=00C853&color=fff"
+                    };
+                } else {
+                    currentUser = {
+                        nome: "Cliente Teste",
+                        email: "cliente@rodaja.com",
+                        telefone: "(37) 98888-0000",
+                        role: "passenger",
+                        avatar: "https://ui-avatars.com/api/?name=CLIENTE&background=3498db&color=fff"
+                    };
+                }
+                localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
+            }
+            
             if(currentUser) {
-                // Prevenção contra crash de contas velhas do modo offline
                 const nomeSeguro = currentUser.nome || currentUser.name;
                 if(!nomeSeguro) {
                     localStorage.clear();
@@ -1230,6 +1257,50 @@
                 document.getElementById('main-bottom-nav').style.display = 'flex';
                 
                 const avImg = `<img src="${currentUser.avatar || getAvatarUrl(nomeSeguro)}">`;
+                const passAvatar = document.getElementById('header-pass-avatar');
+                const driverAvatar = document.getElementById('header-driver-avatar');
+                if(passAvatar) passAvatar.innerHTML = avImg;
+                if(driverAvatar) driverAvatar.innerHTML = avImg;
+
+                if(currentUser.role === 'passenger') {
+                    document.getElementById('user-name-display').innerText = nomeSeguro.split(' ')[0];
+                    renderMotoList(); 
+                    navTo('screen-passenger');
+                } else {
+                    syncDriverPriceUI();
+                    syncDriverUIStatus();
+                    startDriverRadar(); 
+                    navTo('screen-driver');
+                    
+                    // DEMO: cria pedido fake após 3 segundos se não houver nenhum
+                    setTimeout(() => {
+                        if(!localStorage.getItem('rodaja_pedido_ativo')) {
+                            const pedidoDemo = {
+                                id: 'demo_' + Date.now(),
+                                origem: 'Praça do Centro',
+                                destino: 'UNIFOR - Formiga',
+                                distancia: '2.45',
+                                preco: '9.90',
+                                driverEmail: currentUser.email,
+                                driverNome: currentUser.nome,
+                                driverMoto: 'Honda CG 160',
+                                driverPlaca: 'ABC-1234',
+                                driverAvatar: currentUser.avatar,
+                                driverRating: '5.0',
+                                passEmail: 'joao@teste.com',
+                                passNome: 'João da Silva',
+                                passTelefone: '(37) 9 8765-4321',
+                                passAvatar: 'https://ui-avatars.com/api/?name=JOAO&background=3498db&color=fff',
+                                status: 'pendente',
+                                timestamp: Date.now()
+                            };
+                            localStorage.setItem('rodaja_pedido_ativo', JSON.stringify(pedidoDemo));
+                            console.log('PEDIDO DEMO CRIADO PARA TESTE');
+                        }
+                    }, 3000);
+                }
+            }
+        }">`;
                 document.getElementById('header-pass-avatar').innerHTML = avImg;
                 document.getElementById('header-driver-avatar').innerHTML = avImg;
 
@@ -1391,6 +1462,14 @@
         }
 
         async function renderMotoList() {
+            const listDiv = document.getElementById('moto-list');
+            // MODO DEMO - motorista fixo
+            const moto = {nome:'MARCELO CAETANO NASCIMENTO', email:'marcelo@rodaja.com', isOnline:1, isBusy:0, rating:5.0, priceKm:2.5, priceType:'km', moto:'Honda CG 160', placa:'ABC-1234', avatar:'https://ui-avatars.com/api/?name=MARCELO&background=00C853&color=fff', telefone:'(37) 99999-0000'};
+            const statusClass='status-online'; const statusText='Disponível'; const btnDisabled=''; const btnStyle=''; const btnText='Solicitar a MARCELO'; const driverStringData=encodeURIComponent(JSON.stringify(moto)); const priceDisplay='R$ 2,50/km';
+            listDiv.innerHTML = `<div class="profile-card profile-clickable" onclick="openDriverListProfile('${driverStringData}')"><div class="profile-header"><div class="avatar"><img src="${moto.avatar}"></div><div class="profile-info"><h4>${moto.nome}</h4><p><span class="status-dot ${statusClass}"></span> ${statusText}</p><p><i class="fa-solid fa-star" style="color: var(--warning);"></i> 5.0 &bull; ${priceDisplay}</p><p style="font-size:0.7rem; color: var(--primary); margin-top:4px;"><i class="fa-solid fa-id-card"></i> Clique para ver perfil</p></div></div><button class="btn btn-primary btn-small" style="width: 100%;" onclick="event.stopPropagation(); simulateRideRequest('${driverStringData}', this)"><i class="fa-solid fa-motorcycle"></i> ${btnText}</button></div>`;
+            return;
+        }
+        async function renderMotoList_ORIGINAL() {
             const listDiv = document.getElementById('moto-list');
             listDiv.innerHTML = '<p style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Buscando motoristas via Rádio...</p>';
 
