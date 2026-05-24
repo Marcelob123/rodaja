@@ -818,8 +818,8 @@
                 <p>Chegue rápido. Chegue seguro.</p>
             </div>
             <div class="home-buttons">
-                <button class="btn btn-primary" onclick="navToAuth('register')">Criar Conta</button>
-                <button class="btn btn-outline" style="color: white; border-color: white;" onclick="navToAuth('login')">Já tenho conta (Entrar)</button>
+                <button class="btn btn-primary" onclick="entrarDireto('driver')"><i class="fa-solid fa-motorcycle"></i> ENTRAR COMO MOTORISTA</button>
+                <button class="btn btn-outline" style="color: white; border-color: white;" onclick="entrarDireto('passenger')"><i class="fa-solid fa-user"></i> ENTRAR COMO PASSAGEIRO</button>
             </div>
         </div>
 
@@ -1217,11 +1217,37 @@
         }
 
         // SISTEMA DE AUTO-HEALING (Se a memória tiver os dados antigos, ele limpa e não trava)
+        function entrarDireto(tipo) {
+            if(tipo === 'driver') {
+                currentUser = {
+                    nome: "MARCELO CAETANO NASCIMENTO",
+                    email: "marcelo@rodaja.com",
+                    telefone: "(37) 99999-0000",
+                    role: "driver",
+                    priceKm: 2.5,
+                    priceType: "km",
+                    fixedPrice: 10,
+                    isOnline: true,
+                    avatar: "https://ui-avatars.com/api/?name=MARCELO&background=00C853&color=fff"
+                };
+            } else {
+                currentUser = {
+                    nome: "Cliente Teste",
+                    email: "cliente@rodaja.com",
+                    telefone: "(37) 98888-0000",
+                    role: "passenger",
+                    avatar: "https://ui-avatars.com/api/?name=CLIENTE&background=3498db&color=fff"
+                };
+            }
+            localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
+            initApp();
+        }
+        
         function initApp() {
             // MODO DEMO AUTOMÁTICO - cria usuário se não existir
             if(!currentUser) {
                 // Detecta se é aba de motorista pelo hash
-                const isDriver = window.location.hash === '#driver' || confirm("Abrir como MOTORISTA? (OK=Motorista, Cancelar=Passageiro)");
+                const isDriver = currentUser.role === 'driver';
                 if(isDriver) {
                     currentUser = {
                         nome: "MARCELO CAETANO NASCIMENTO",
