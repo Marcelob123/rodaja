@@ -391,7 +391,7 @@
             animation: fadeIn 0.3s ease;
         }
 
-        /* === MAPAS E CARDS === */
+        /* === MAPAS E CARDS (GPS ANIMADO) === */
         .map-placeholder {
             width: 100%;
             height: 200px;
@@ -761,7 +761,7 @@
                     <h3 class="section-title" style="margin-bottom: 8px; font-size: 1rem;">Veículo e Qualificação</h3>
                     <p><strong>Moto:</strong> <span id="view-profile-moto"></span></p>
                     <p><strong>Placa:</strong> <span id="view-profile-plate"></span></p>
-                                        <p style="margin-top: 8px; color: var(--warning); font-size: 1.2rem; font-weight: bold;">
+                    <p style="margin-top: 8px; color: var(--warning); font-size: 1.2rem; font-weight: bold;">
                         <i class="fa-solid fa-star"></i> <span id="view-profile-rating">5.0</span>
                     </p>
                 </div>
@@ -962,7 +962,7 @@
                         <i class="fa-solid fa-check-double"></i> Motorista Aceitou a Corrida
                     </div>
                     <div class="sync-text">
-                        <i class="fa-solid fa-rotate"></i> GPS e Status sincronizam em: <strong id="sync-timer-display" style="color: var(--primary);">12</strong>s
+                        <i class="fa-solid fa-rotate"></i> GPS e Status sincronizam em: <strong id="sync-timer-display" style="color: var(--primary);">3</strong>s
                     </div>
                     
                     <div class="map-placeholder map-active">
@@ -1065,7 +1065,7 @@
                                 <strong id="req-suggested-price" style="color: var(--text-light);">-</strong>
                             </div>
                             <div style="width: 100%; margin-top: 12px; border-top: 1px solid #eee; padding-top: 12px;">
-                                <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-dark); display: block; text-align: left; margin-bottom: 6px;">Você pode ACEITAR o valor sugerido ou DEFINIR seu preço final (R$):</label>
+                                <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-dark); display: block; text-align: left; margin-bottom: 6px;">Confirme/Digite o valor que vai cobrar (R$):</label>
                                 <input type="number" id="driver-input-price" class="form-control" style="padding: 10px; font-size: 1.2rem; text-align: center; font-weight: bold; color: var(--primary);" step="0.10">
                             </div>
                         </div>
@@ -1408,8 +1408,8 @@
                     }
 
                     drivers.forEach(moto => {
-                        const isOnline = true; // FORÇADO PARA TESTE - moto.isOnline == 1;
-                        const isBusy = false; // FORÇADO PARA TESTE
+                        const isOnline = moto.isOnline == 1;
+                        const isBusy = moto.isBusy == 1;
                         
                         let statusText = "Offline"; let statusClass = "status-offline";
                         let btnDisabled = "disabled"; let btnStyle = "background: #bdc3c7; cursor: not-allowed;";
@@ -1561,30 +1561,20 @@
             }
 
             try {
-                // ENVIA CORRIDA PARA O MOTORISTA EM TEMPO REAL
-                currentPedidoId = "pedido_" + Date.now();
-                const pedido = {
-                    id: currentPedidoId,
-                    ...reqData,
-                    status: 'pendente',
-                    preco: suggestedPrice,
-                    distancia: calculatedDistance,
-                    timestamp: Date.now()
-                };
-                
-                // SALVA NO LOCALSTORAGE - MOTORISTA VÊ INSTANTANEAMENTE
-                localStorage.setItem('rodaja_pedido_ativo', JSON.stringify(pedido));
-                localStorage.setItem('rodaja_update', Date.now().toString());
-                
-                currentRideData = pedido;
-                
-                document.getElementById('passenger-search-panel').style.display = 'none';
-                document.getElementById('modal-analyzing').style.display = 'flex';
-                
-                // Inicia polling para ver quando motorista aceitar
-                startPassengerPolling();
-                
-            } catch(e) { alert("Erro: " + e.message); }
+                // AQUI ENVIA PRA NUVEM E COMEÇA A ESPERA
+                const res = await fetch(`${API_URL}?acao=solicitar_corrida`, { method: 'POST', body: JSON.stringify(reqData) });
+                const resData = await res.json();
+                if(resData.sucesso) {
+                    currentPedidoId = resData.pedido_id;
+                    currentRideData = reqData; // Armazena info visual
+                    
+                    document.getElementById('passenger-search-panel').style.display = 'none';
+                    document.getElementById('modal-analyzing').style.display = 'flex';
+                    
+                    // Inicia polling para ver quando motorista aceitar
+                    startPassengerPolling(); 
+                } else { alert("Falha na solicitação"); }
+            } catch(e) { alert("Erro de conexão com o banco"); }
         }
 
         async function cancelRideAnalysis() {
@@ -1598,7 +1588,7 @@
             currentPedidoId = null; currentRideData = null;
         }
 
-        // 2. RADAR DO MOTORISTA 
+        // 2. RADAR DO MOTORISTA (10 SEGUNDOS)
         function startDriverRadar() {
             clearInterval(pollingDriverInterval);
             pollingDriverInterval = setInterval(async () => {
@@ -1610,6 +1600,13 @@
                     
                     if(data.sucesso && data.pedido) {
                         const p = data.pedido;
+                        
+                        // EVITA BUG DE PEDIDO CANCELADO FICAR PRESO
+                        if(p.status === 'cancelado') {
+                            resetRideUI();
+                            return;
+                        }
+
                         currentPedidoId = p.id;
                         currentRideData = p; 
 
@@ -1621,6 +1618,7 @@
                                     document.getElementById('req-origin').innerText = p.origem + " (Formiga)";
                                     document.getElementById('req-destination').innerText = p.destino + " (Formiga)";
                                     document.getElementById('req-distance').innerText = parseFloat(p.distancia).toFixed(2) + ' km';
+                                    
                                     // Mostra breakdown preciso
                                     const breakdown = `Base R$5,00 + ${p.distancia}km × R$${(parseFloat(currentUser.priceKm)||1.5).toFixed(2)}`;
                                     document.getElementById('req-suggested-price').innerHTML = 'R$ ' + parseFloat(p.preco).toFixed(2).replace('.', ',') + '<br><small style="font-size:0.7rem;color:#7f8c8d;">' + breakdown + '</small>';
@@ -1658,74 +1656,108 @@
                         document.getElementById('driver-queue-alert').style.display = 'none';
                     }
                 } catch(e) { console.log("Radar Driver Timeout"); }
-            }, 3000);
+            }, 10000); // 10 Segundos
         }
 
-        // 3. RÁDIO DO PASSAGEIRO 
+        // 3. RÁDIO DO PASSAGEIRO (10 SEGUNDOS)
         function startPassengerPolling() {
             clearInterval(pollingPassInterval);
-            passengerTimeLeft = 3; 
+            passengerTimeLeft = 10; 
 
-            pollingPassInterval = setInterval(() => {
+            pollingPassInterval = setInterval(async () => {
                 if(!currentPedidoId) return;
                 
-                const pedidoStr = localStorage.getItem('rodaja_pedido_ativo');
-                if(!pedidoStr) return;
-                
-                const p = JSON.parse(pedidoStr);
-                if(p.id !== currentPedidoId) return;
-                
-                currentRideData = p;
-
-                if(p.status === 'aceito' && document.getElementById('modal-analyzing').style.display === 'flex') {
-                    document.getElementById('modal-analyzing').style.display = 'none';
-                    document.getElementById('passenger-active-ride').style.display = 'block';
-                    
-                    document.getElementById('active-driver-avatar').innerHTML = `<img src="${p.driverAvatar || getAvatarUrl(p.driverNome)}">`;
-                    document.getElementById('active-driver-name').innerText = p.driverNome;
-                    document.getElementById('active-driver-moto').innerText = (p.driverMoto || 'Honda CG') + " | " + (p.driverPlaca || '');
-                    document.getElementById('pass-active-origin').innerText = p.origem;
-                    document.getElementById('pass-active-dest').innerText = p.destino;
-                    document.getElementById('pass-active-price').innerText = 'R$ ' + parseFloat(p.preco).toFixed(2).replace('.', ',');
+                passengerTimeLeft--;
+                if(document.getElementById('sync-timer-display')) {
+                    document.getElementById('sync-timer-display').innerText = passengerTimeLeft > 0 ? passengerTimeLeft : 10;
                 }
 
-                if(['aceito', 'a_caminho', 'chegou', 'em_viagem'].includes(p.status)) {
-                    rideStatusState = p.status;
-                    syncPassengerUI();
+                if(passengerTimeLeft <= 0) {
+                    passengerTimeLeft = 10; 
+                    try {
+                        const res = await fetch(`${API_URL}?acao=checar_status_pedido&id=${currentPedidoId}&t=${Date.now()}`);
+                        const data = await res.json();
+                        
+                        if(data.sucesso && data.pedido) {
+                            const p = data.pedido;
+                            currentRideData = p;
+
+                            if(p.status === 'recusado' || p.status === 'cancelado') {
+                                alert(p.status === 'recusado' ? "O motorista precisou recusar a corrida." : "Corrida cancelada.");
+                                clearInterval(pollingPassInterval);
+                                resetRideUI();
+                                renderMotoList(); 
+                                return;
+                            }
+
+                            if(p.status === 'aceito' && document.getElementById('modal-analyzing').style.display === 'flex') {
+                                document.getElementById('modal-analyzing').style.display = 'none';
+                                document.getElementById('passenger-queue-ride').style.display = 'none';
+                                document.getElementById('passenger-active-ride').style.display = 'block';
+                                
+                                document.getElementById('active-driver-avatar').innerHTML = `<img src="${p.driverAvatar || getAvatarUrl(p.driverNome)}">`;
+                                document.getElementById('active-driver-name').innerText = p.driverNome;
+                                document.getElementById('active-driver-moto').innerText = (p.driverMoto || 'Honda CG') + " | " + (p.driverPlaca || '');
+                                document.getElementById('active-driver-rating-display').innerText = parseFloat(p.driverRating || 5).toFixed(1);
+                                
+                                document.getElementById('btn-call-driver').href = `tel:${p.driverTelefone}`; 
+                                document.getElementById('pass-active-origin').innerText = p.origem + ", Formiga - MG";
+                                document.getElementById('pass-active-dest').innerText = p.destino + ", Formiga - MG";
+                                document.getElementById('pass-active-price').innerText = 'R$ ' + parseFloat(p.preco).toFixed(2).replace('.', ',');
+                            }
+
+                            if(['aceito', 'a_caminho', 'chegou', 'em_viagem'].includes(p.status)) {
+                                rideStatusState = p.status;
+                                syncPassengerUI();
+                            } else if (p.status === 'finalizado') {
+                                clearInterval(pollingPassInterval);
+                                finishRidePassenger(); 
+                            }
+
+                            if(p.chat_json && document.getElementById('modal-chat').style.display === 'flex') {
+                                currentRideData.chat = JSON.parse(p.chat_json);
+                                renderChat();
+                            }
+                        }
+                    } catch(e) { console.log("Polling Pass Timeout"); }
                 }
             }, 1000);
         }
 
         // --- AÇÕES DO MOTORISTA ---
-        function rejectRide() {
-            const pedido = JSON.parse(localStorage.getItem('rodaja_pedido_ativo') || '{}');
-            pedido.status = 'recusado';
-            localStorage.setItem('rodaja_pedido_ativo', JSON.stringify(pedido));
+        async function rejectRide() {
+            if(currentPedidoId) {
+                await fetch(`${API_URL}?acao=atualizar_pedido`, { method: 'POST', body: JSON.stringify({id: currentPedidoId, status: 'recusado'}) });
+            }
             document.getElementById('new-ride-alert').style.display = 'none';
             document.getElementById('no-rides-msg').style.display = 'block';
+            currentPedidoId = null; currentRideData = null;
         }
 
-        function acceptRide() {
+        async function acceptRide() {
             const inputVal = parseFloat(document.getElementById('driver-input-price').value);
+            if (isNaN(inputVal) || inputVal <= 0) { alert("Digite um valor válido."); return; }
             const precoFinal = inputVal.toFixed(2);
             
-            const pedido = JSON.parse(localStorage.getItem('rodaja_pedido_ativo'));
-            pedido.status = 'aceito';
-            pedido.preco = precoFinal;
-            pedido.driverAceitouEm = new Date().toLocaleTimeString('pt-BR');
-            localStorage.setItem('rodaja_pedido_ativo', JSON.stringify(pedido));
-            
-            // ATUALIZA PARA O PASSAGEIRO VER
-            localStorage.setItem('rodaja_update', Date.now().toString());
+            await fetch(`${API_URL}?acao=atualizar_pedido`, { 
+                method: 'POST', body: JSON.stringify({id: currentPedidoId, status: 'aceito', preco: precoFinal}) 
+            });
+
+            // Fica "Busy" na Nuvem para os outros irem pra fila
+            currentUser.isBusy = true;
+            localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
+            updateDriverInDB(currentUser);
+            syncDriverUIStatus();
 
             document.getElementById('new-ride-alert').style.display = 'none';
             document.getElementById('driver-waiting-panel').style.display = 'none';
-            document.getElementById('driver-active-ride').style.display = 'block';
         }
 
         async function updateRideStatus(newStatus) {
             await fetch(`${API_URL}?acao=atualizar_pedido`, { method: 'POST', body: JSON.stringify({id: currentPedidoId, status: newStatus}) });
-            if(newStatus === 'finalizado') finishRideDriver();
+            if(newStatus === 'finalizado') {
+                finishRideDriver();
+            }
         }
 
         function syncDriverUI() {
@@ -1761,7 +1793,7 @@
 
         // --- FINALIZAÇÃO, HISTÓRICO E AVALIAÇÃO ---
         async function finishRideDriver() {
-            alert("Corrida finalizada! Sincronizando Histórico...");
+            alert("Corrida finalizada! Sincronizando com o Histórico...");
             try {
                 await fetch(`${API_URL}?acao=salvar_corrida`, {
                     method: 'POST',
@@ -1801,7 +1833,7 @@
 
         async function submitRating() {
             document.getElementById('modal-rating').style.display = 'none';
-            alert("Avaliação registrada!");
+            alert("Avaliação registrada com sucesso!");
             resetRideUI();
             renderMotoList();
             navTo('screen-passenger');
@@ -1818,7 +1850,8 @@
             document.getElementById('driver-active-ride').style.display = 'none';
             document.getElementById('driver-waiting-panel').style.display = 'block';
             document.getElementById('new-ride-alert').style.display = 'none';
-            
+            document.getElementById('no-rides-msg').style.display = 'block';
+
             document.getElementById('modal-analyzing').style.display = 'none';
             document.getElementById('passenger-active-ride').style.display = 'none';
             document.getElementById('passenger-queue-ride').style.display = 'none';
@@ -1831,8 +1864,8 @@
         }
 
         // --- SISTEMA DE CHAT NUVEM ---
-        function openChat() { document.getElementById('modal-chat').style.display = 'flex'; renderChat(); }
-        function closeChat() { document.getElementById('modal-chat').style.display = 'none'; }
+        function openChat() { document.getElementById('modal-chat').style.display = 'flex'; renderChat(); clearInterval(chatInterval); chatInterval = setInterval(renderChat, 1500); }
+        function closeChat() { document.getElementById('modal-chat').style.display = 'none'; clearInterval(chatInterval); }
 
         async function sendMessage() {
             const input = document.getElementById('chat-input');
@@ -1859,13 +1892,17 @@
             currentRideData.chat.forEach(msg => {
                 const isMe = msg.senderEmail === currentUser.email;
                 const bubbleClass = isMe ? 'chat-sent' : 'chat-received';
-                const roleColor = isMe ? '#e1e8ed' : (msg.role === 'driver' ? 'var(--primary)' : '#3498db');
-                const roleIcon = msg.role === 'driver' ? 'fa-motorcycle' : 'fa-user';
-                const roleName = msg.role === 'driver' ? 'Motorista' : 'Passageiro';
+                
+                let roleLabelHTML = '';
+                if(msg.role === 'driver') {
+                    roleLabelHTML = `<div class="chat-role-label" style="color: ${isMe ? '#e1e8ed' : 'var(--primary)'};"><i class="fa-solid fa-motorcycle"></i> Motorista</div>`;
+                } else {
+                    roleLabelHTML = `<div class="chat-role-label" style="color: ${isMe ? '#e1e8ed' : '#3498db'};"><i class="fa-solid fa-user"></i> Passageiro</div>`;
+                }
 
                 chatBox.innerHTML += `
                     <div class="chat-bubble ${bubbleClass}">
-                        <div class="chat-role-label" style="color: ${roleColor};"><i class="fa-solid ${roleIcon}"></i> ${roleName}</div>
+                        ${roleLabelHTML}
                         <span>${msg.text}</span>
                         <div style="font-size: 0.65rem; text-align: right; margin-top: 4px; opacity: 0.7;">${msg.time}</div>
                     </div>`;
