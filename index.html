@@ -1408,8 +1408,8 @@
                     }
 
                     drivers.forEach(moto => {
-                        const isOnline = moto.isOnline == 1;
-                        const isBusy = moto.isBusy == 1;
+                        const isOnline = true; // FORÇADO PARA TESTE - moto.isOnline == 1;
+                        const isBusy = false; // FORÇADO PARA TESTE
                         
                         let statusText = "Offline"; let statusClass = "status-offline";
                         let btnDisabled = "disabled"; let btnStyle = "background: #bdc3c7; cursor: not-allowed;";
@@ -1561,17 +1561,33 @@
             }
 
             try {
-                const res = await fetch(`${API_URL}?acao=solicitar_corrida`, { method: 'POST', body: JSON.stringify(reqData) });
-                const resData = await res.json();
-                if(resData.sucesso) {
-                    currentPedidoId = resData.pedido_id;
-                    document.getElementById('passenger-search-panel').style.display = 'none';
-                    document.getElementById('passenger-active-ride').style.display = 'none'; 
-                    document.getElementById('modal-analyzing').style.display = 'flex';
-                    
-                    startPassengerPolling(); 
-                } else { alert(resData.erro); }
-            } catch(e) { alert("Erro ao criar pedido na nuvem."); }
+                // MODO DEMONSTRAÇÃO - pula API
+                console.log("Calculando distância precisa:", calculatedDistance, "km");
+                currentPedidoId = "demo_" + Date.now();
+                currentRideData = {
+                    ...reqData,
+                    id: currentPedidoId,
+                    status: 'pendente',
+                    preco: suggestedPrice,
+                    distancia: calculatedDistance
+                };
+                
+                document.getElementById('passenger-search-panel').style.display = 'none';
+                document.getElementById('modal-analyzing').style.display = 'flex';
+                
+                // Simula motorista aceitando em 3 segundos
+                setTimeout(() => {
+                    document.getElementById('modal-analyzing').style.display = 'none';
+                    document.getElementById('passenger-active-ride').style.display = 'block';
+                    document.getElementById('active-driver-name').innerText = selectedDriver.nome;
+                    document.getElementById('active-driver-moto').innerText = (selectedDriver.moto || 'Honda CG 160') + " | " + (selectedDriver.placa || 'ABC-1234');
+                    document.getElementById('pass-active-origin').innerText = origin + ", Formiga - MG";
+                    document.getElementById('pass-active-dest').innerText = dest + ", Formiga - MG";
+                    document.getElementById('pass-active-price').innerText = 'R$ ' + parseFloat(suggestedPrice).toFixed(2).replace('.', ',');
+                    alert("Corrida simulada! Distância precisa: " + calculatedDistance + " km");
+                }, 3000);
+                
+            } catch(e) { alert("Erro: " + e.message); }
         }
 
         async function cancelRideAnalysis() {
