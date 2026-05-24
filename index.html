@@ -761,7 +761,7 @@
                     <h3 class="section-title" style="margin-bottom: 8px; font-size: 1rem;">Veículo e Qualificação</h3>
                     <p><strong>Moto:</strong> <span id="view-profile-moto"></span></p>
                     <p><strong>Placa:</strong> <span id="view-profile-plate"></span></p>
-                    <p style="margin-top: 8px; color: var(--warning); font-size: 1.2rem; font-weight: bold;">
+                                        <p style="margin-top: 8px; color: var(--warning); font-size: 1.2rem; font-weight: bold;">
                         <i class="fa-solid fa-star"></i> <span id="view-profile-rating">5.0</span>
                     </p>
                 </div>
@@ -1432,16 +1432,17 @@
                         const driverStringData = encodeURIComponent(JSON.stringify(moto));
 
                         listDiv.innerHTML += `
-                            <div class="profile-card">
+                            <div class="profile-card profile-clickable" onclick="openDriverListProfile('${driverStringData}')">
                                 <div class="profile-header">
                                     <div class="avatar"><img src="${moto.avatar || getAvatarUrl(moto.nome)}"></div>
                                     <div class="profile-info">
                                         <h4>${moto.nome}</h4>
                                         <p><span class="status-dot ${statusClass}"></span> ${statusText}</p>
                                         <p><i class="fa-solid fa-star" style="color: var(--warning);"></i> ${parseFloat(moto.rating || 5).toFixed(1)} &bull; ${priceDisplay}</p>
+                                        <p style="font-size:0.7rem; color: var(--primary); margin-top:4px;"><i class="fa-solid fa-id-card"></i> Clique para ver perfil completo</p>
                                     </div>
                                 </div>
-                                <button class="btn btn-primary btn-small" style="width: 100%; ${btnStyle}" ${btnDisabled} onclick="simulateRideRequest('${driverStringData}', this)">
+                                <button class="btn btn-primary btn-small" style="width: 100%; ${btnStyle}" ${btnDisabled} onclick="event.stopPropagation(); simulateRideRequest('${driverStringData}', this)">
                                     <i class="fa-solid fa-motorcycle"></i> ${btnText}
                                 </button>
                             </div>
@@ -1875,6 +1876,19 @@
                 }
                 document.getElementById('modal-view-profile').style.display = 'flex';
             }
+        }
+        
+        function openDriverListProfile(driverStringData) {
+            const moto = JSON.parse(decodeURIComponent(driverStringData));
+            document.getElementById('view-profile-avatar').innerHTML = `<img src="${moto.avatar || getAvatarUrl(moto.nome)}">`;
+            document.getElementById('view-profile-name').innerText = moto.nome;
+            document.getElementById('view-profile-phone').innerText = moto.telefone || "(37) 9 0000-0000";
+            document.getElementById('view-profile-role').innerText = "Motorista Parceiro";
+            document.getElementById('view-profile-driver-details').style.display = 'block';
+            document.getElementById('view-profile-moto').innerText = moto.moto || "-";
+            document.getElementById('view-profile-plate').innerText = moto.placa || "-";
+            document.getElementById('view-profile-rating').innerText = parseFloat(moto.rating || 5).toFixed(1);
+            document.getElementById('modal-view-profile').style.display = 'flex';
         }
         function closeViewProfile() { document.getElementById('modal-view-profile').style.display = 'none'; }
 
