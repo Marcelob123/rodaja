@@ -1561,31 +1561,28 @@
             }
 
             try {
-                // MODO DEMONSTRAÇÃO - pula API
-                console.log("Calculando distância precisa:", calculatedDistance, "km");
-                currentPedidoId = "demo_" + Date.now();
-                currentRideData = {
-                    ...reqData,
+                // ENVIA CORRIDA PARA O MOTORISTA EM TEMPO REAL
+                currentPedidoId = "pedido_" + Date.now();
+                const pedido = {
                     id: currentPedidoId,
+                    ...reqData,
                     status: 'pendente',
                     preco: suggestedPrice,
-                    distancia: calculatedDistance
+                    distancia: calculatedDistance,
+                    timestamp: Date.now()
                 };
+                
+                // SALVA NO LOCALSTORAGE - MOTORISTA VÊ INSTANTANEAMENTE
+                localStorage.setItem('rodaja_pedido_ativo', JSON.stringify(pedido));
+                localStorage.setItem('rodaja_update', Date.now().toString());
+                
+                currentRideData = pedido;
                 
                 document.getElementById('passenger-search-panel').style.display = 'none';
                 document.getElementById('modal-analyzing').style.display = 'flex';
                 
-                // Simula motorista aceitando em 3 segundos
-                setTimeout(() => {
-                    document.getElementById('modal-analyzing').style.display = 'none';
-                    document.getElementById('passenger-active-ride').style.display = 'block';
-                    document.getElementById('active-driver-name').innerText = selectedDriver.nome;
-                    document.getElementById('active-driver-moto').innerText = (selectedDriver.moto || 'Honda CG 160') + " | " + (selectedDriver.placa || 'ABC-1234');
-                    document.getElementById('pass-active-origin').innerText = origin + ", Formiga - MG";
-                    document.getElementById('pass-active-dest').innerText = dest + ", Formiga - MG";
-                    document.getElementById('pass-active-price').innerText = 'R$ ' + parseFloat(suggestedPrice).toFixed(2).replace('.', ',');
-                    alert("Corrida simulada! Distância precisa: " + calculatedDistance + " km");
-                }, 3000);
+                // Inicia polling para ver quando motorista aceitar
+                startPassengerPolling();
                 
             } catch(e) { alert("Erro: " + e.message); }
         }
@@ -1669,92 +1666,61 @@
             clearInterval(pollingPassInterval);
             passengerTimeLeft = 3; 
 
-            pollingPassInterval = setInterval(async () => {
+            pollingPassInterval = setInterval(() => {
                 if(!currentPedidoId) return;
                 
-                passengerTimeLeft--;
-                if(document.getElementById('sync-timer-display')) {
-                    document.getElementById('sync-timer-display').innerText = passengerTimeLeft > 0 ? passengerTimeLeft : 3;
+                const pedidoStr = localStorage.getItem('rodaja_pedido_ativo');
+                if(!pedidoStr) return;
+                
+                const p = JSON.parse(pedidoStr);
+                if(p.id !== currentPedidoId) return;
+                
+                currentRideData = p;
+
+                if(p.status === 'aceito' && document.getElementById('modal-analyzing').style.display === 'flex') {
+                    document.getElementById('modal-analyzing').style.display = 'none';
+                    document.getElementById('passenger-active-ride').style.display = 'block';
+                    
+                    document.getElementById('active-driver-avatar').innerHTML = `<img src="${p.driverAvatar || getAvatarUrl(p.driverNome)}">`;
+                    document.getElementById('active-driver-name').innerText = p.driverNome;
+                    document.getElementById('active-driver-moto').innerText = (p.driverMoto || 'Honda CG') + " | " + (p.driverPlaca || '');
+                    document.getElementById('pass-active-origin').innerText = p.origem;
+                    document.getElementById('pass-active-dest').innerText = p.destino;
+                    document.getElementById('pass-active-price').innerText = 'R$ ' + parseFloat(p.preco).toFixed(2).replace('.', ',');
                 }
 
-                if(passengerTimeLeft <= 0) {
-                    passengerTimeLeft = 3; 
-                    try {
-                        const res = await fetch(`${API_URL}?acao=checar_status_pedido&id=${currentPedidoId}&t=${Date.now()}`);
-                        const data = await res.json();
-                        
-                        if(data.sucesso && data.pedido) {
-                            const p = data.pedido;
-                            currentRideData = p;
-
-                            if(p.status === 'recusado' || p.status === 'cancelado') {
-                                alert(p.status === 'recusado' ? "O motorista precisou recusar a corrida." : "Corrida cancelada.");
-                                clearInterval(pollingPassInterval);
-                                resetRideUI();
-                                renderMotoList(); 
-                                return;
-                            }
-
-                            if(p.status === 'aceito' && document.getElementById('modal-analyzing').style.display === 'flex') {
-                                document.getElementById('modal-analyzing').style.display = 'none';
-                                document.getElementById('passenger-queue-ride').style.display = 'none';
-                                document.getElementById('passenger-active-ride').style.display = 'block';
-                                
-                                document.getElementById('active-driver-avatar').innerHTML = `<img src="${p.driverAvatar || getAvatarUrl(p.driverNome)}">`;
-                                document.getElementById('active-driver-name').innerText = p.driverNome;
-                                document.getElementById('active-driver-moto').innerText = p.driverMoto + " | " + p.driverPlaca;
-                                document.getElementById('active-driver-rating-display').innerText = parseFloat(p.driverRating || 5).toFixed(1);
-                                
-                                document.getElementById('btn-call-driver').href = `tel:${p.passTelefone}`; 
-                                document.getElementById('pass-active-origin').innerText = p.origem + ", Formiga - MG";
-                                document.getElementById('pass-active-dest').innerText = p.destino + ", Formiga - MG";
-                                document.getElementById('pass-active-price').innerText = 'R$ ' + p.preco.replace('.', ',');
-                            }
-
-                            if(['aceito', 'a_caminho', 'chegou', 'em_viagem'].includes(p.status)) {
-                                rideStatusState = p.status;
-                                syncPassengerUI();
-                            } else if (p.status === 'finalizado') {
-                                clearInterval(pollingPassInterval);
-                                finishRidePassenger(); 
-                            }
-
-                            if(p.chat_json && document.getElementById('modal-chat').style.display === 'flex') {
-                                currentRideData.chat = JSON.parse(p.chat_json);
-                                renderChat();
-                            }
-                        }
-                    } catch(e) { console.log("Polling Pass Timeout"); }
+                if(['aceito', 'a_caminho', 'chegou', 'em_viagem'].includes(p.status)) {
+                    rideStatusState = p.status;
+                    syncPassengerUI();
                 }
             }, 1000);
         }
 
         // --- AÇÕES DO MOTORISTA ---
-        async function rejectRide() {
-            if(currentPedidoId) {
-                await fetch(`${API_URL}?acao=atualizar_pedido`, { method: 'POST', body: JSON.stringify({id: currentPedidoId, status: 'recusado'}) });
-            }
+        function rejectRide() {
+            const pedido = JSON.parse(localStorage.getItem('rodaja_pedido_ativo') || '{}');
+            pedido.status = 'recusado';
+            localStorage.setItem('rodaja_pedido_ativo', JSON.stringify(pedido));
             document.getElementById('new-ride-alert').style.display = 'none';
             document.getElementById('no-rides-msg').style.display = 'block';
-            currentPedidoId = null; currentRideData = null;
         }
 
-        async function acceptRide() {
+        function acceptRide() {
             const inputVal = parseFloat(document.getElementById('driver-input-price').value);
-            if (isNaN(inputVal) || inputVal <= 0) { alert("Digite um valor válido."); return; }
             const precoFinal = inputVal.toFixed(2);
             
-            await fetch(`${API_URL}?acao=atualizar_pedido`, { 
-                method: 'POST', body: JSON.stringify({id: currentPedidoId, status: 'aceito', preco: precoFinal}) 
-            });
-
-            currentUser.isBusy = true;
-            localStorage.setItem('motoAppCurrent', JSON.stringify(currentUser));
-            updateDriverInDB(currentUser);
-            syncDriverUIStatus();
+            const pedido = JSON.parse(localStorage.getItem('rodaja_pedido_ativo'));
+            pedido.status = 'aceito';
+            pedido.preco = precoFinal;
+            pedido.driverAceitouEm = new Date().toLocaleTimeString('pt-BR');
+            localStorage.setItem('rodaja_pedido_ativo', JSON.stringify(pedido));
+            
+            // ATUALIZA PARA O PASSAGEIRO VER
+            localStorage.setItem('rodaja_update', Date.now().toString());
 
             document.getElementById('new-ride-alert').style.display = 'none';
             document.getElementById('driver-waiting-panel').style.display = 'none';
+            document.getElementById('driver-active-ride').style.display = 'block';
         }
 
         async function updateRideStatus(newStatus) {
